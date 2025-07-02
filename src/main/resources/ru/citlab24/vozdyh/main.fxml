@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ScrollPane?>
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ru.citlab24.vozdyh.MainController">
+
+    <center>
+        <TabPane fx:id="tabPane" prefWidth="800" prefHeight="600">
+            <!-- Общие данные -->
+            <Tab fx:id="generalTab" text="Общие данные">
+                <GridPane hgap="10" vgap="10">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="30"/>
+                        <ColumnConstraints percentWidth="70"/>
+                    </columnConstraints>
+
+                    <Label text="№ протокола:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <TextField fx:id="protocolNumberField"
+                               promptText="Введите номер протокола"
+                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                    <Label text="Дата испытаний:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                    <DatePicker fx:id="testDatePicker"
+                                GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                    <Label text="Заказчик:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                    <TextField fx:id="customerField"
+                               promptText="ФИО или название"
+                               GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                    <Label text="Объект:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                    <TextField fx:id="objectNameField"
+                               promptText="Описание объекта"
+                               GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                    <Label text="Тип здания:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                    <ChoiceBox fx:id="buildingTypeChoiceBox"
+                               GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                    <Label text="Вид стен и толщина:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                    <TextField fx:id="wallTypeField" promptText="Вид и толщина стен" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+                    <Label text="Вид оконных блоков:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                    <TextField fx:id="windowTypeField" promptText="Вид окон" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+                    <Label text="Тип вентиляции:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                    <ChoiceBox fx:id="ventilationTypeChoiceBox" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+
+                    <Label text="Адрес заказчика:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+                    <TextField fx:id="customerAddressField"
+                               promptText="Юридический адрес"
+                               GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+
+                    <HBox spacing="10" alignment="CENTER_RIGHT"
+                          GridPane.rowIndex="9" GridPane.columnIndex="1">
+                        <Button text="Рассчитать" onAction="#handleCalculate"/>
+                        <Button text="Сохранить"   onAction="#handleSave"/>
+                    </HBox>
+                </GridPane>
+
+            </Tab>
+
+            <!-- Помещения -->
+            <Tab text="Помещения">
+                <ScrollPane fitToWidth="true">
+                    <VBox fx:id="roomsContainer" spacing="20">
+                        <padding>
+                            <Insets top="20" right="20" bottom="20" left="20"/>
+                        </padding>
+                    </VBox>
+                </ScrollPane>
+            </Tab>
+        </TabPane>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT"  spacing="10">
+            <padding>
+                <Insets top="20" right="20" bottom="20" left="20"/>
+            </padding>
+            <Button text="Рассчитать" onAction="#handleCalculate"/>
+            <Button text="Сохранить" onAction="#handleSave"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>
