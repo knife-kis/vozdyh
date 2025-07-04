@@ -80,6 +80,12 @@
 
             <!-- Помещения -->
             <Tab text="Помещения">
+            <VBox spacing="10">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Количество комнат:"/>
+                    <TextField fx:id="roomCountField" promptText="Введите число" prefWidth="100"/>
+                    <Button fx:id="applyRoomCountButton" text="Применить"/>
+                </HBox>
                 <ScrollPane fitToWidth="true">
                     <VBox fx:id="roomsContainer" spacing="20">
                         <padding>
@@ -87,7 +93,8 @@
                         </padding>
                     </VBox>
                 </ScrollPane>
-            </Tab>
+            </VBox>
+        </Tab>
         </TabPane>
     </center>
 

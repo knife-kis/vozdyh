@@ -41,14 +41,23 @@ public class DocxGenerator {
             replaceAllText(doc, "[TestDate]", date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
             replaceAllText(doc, "[Customer]", model.getCustomer());
             replaceAllText(doc, "[ObjectName]", model.getObjectName());
+            replaceAllText(doc, "[наименование объекта]", model.getObjectName());
+            replaceAllText(doc, "[следующий день]", nextDayStr);
+            replaceAllText(doc, "[текущий месяц]", currentMonth);
+            replaceAllText(doc, "[текущий год]", fullYear);
             replaceAllText(doc, "[Наименование заказчика]", model.getCustomer());
             replaceAllText(doc, "[юридический адрес заказчика]", model.getCustomerAddress());
+            replaceAllText(doc, "[наименование объекта]", model.getObjectName());
             replaceAllText(doc, "[вид стен и их толщина]", model.getWallType());
             replaceAllText(doc, "[вид оконных блоков]", model.getWindowType());
             replaceAllText(doc, "[естественная/искусственная]", model.getVentilationType());
             replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
                     String.valueOf(model.getAirExchangeNorm()));
-            replaceAllText(doc, "[наименование объекта]", model.getObjectName());
+            String formattedDate = date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            replaceAllText(doc, "[текущая дата]", formattedDate);
+            System.out.println("Customer: " + model.getCustomer());
+            System.out.println("Address: " + model.getCustomerAddress());
+            System.out.println("Date: " + formattedDate);
 
             // Обработка комнат с проверкой размера списка
             List<RoomData> rooms = model.getRooms();
@@ -97,100 +106,244 @@ public class DocxGenerator {
                 doc.write(out);
             }
             return outputFile;
+
         }
     }
 
-    private static void replaceAllText(XWPFDocument doc, String placeholder, String replacement) {
-        // Замена в обычных параграфах
+    private static void replaceSpecialPlaceholder(XWPFDocument doc, String placeholder,
+                                                  String[] parts, VerticalAlign[] formats) {
+        // Обработка в параграфах
         for (XWPFParagraph p : doc.getParagraphs()) {
-            replaceInParagraph(p, placeholder, replacement);
+            replaceSpecialInParagraph(p, placeholder, parts, formats); // Исправленный вызов
         }
 
-        // Замена в таблицах
+        // Обработка в таблицах
         for (XWPFTable table : doc.getTables()) {
             for (XWPFTableRow row : table.getRows()) {
                 for (XWPFTableCell cell : row.getTableCells()) {
                     for (XWPFParagraph p : cell.getParagraphs()) {
-                        replaceInParagraph(p, placeholder, replacement);
+                        replaceSpecialInParagraph(p, placeholder, parts, formats); // Исправленный вызов
                     }
                 }
             }
         }
+    }
+    private static void replaceSpecialInParagraph(XWPFParagraph p, String placeholder,
+                                                  String[] parts, VerticalAlign[] formats) {
+        List<XWPFRun> runs = p.getRuns();
 
-        // Замена в колонтитулах
-        for (XWPFHeader header : doc.getHeaderList()) {
-            for (XWPFParagraph p : header.getParagraphs()) {
-                replaceInParagraph(p, placeholder, replacement);
-            }
-        }
+        for (int i = 0; i < runs.size(); i++) {
+            XWPFRun run = runs.get(i);
+            String runText = run.getText(0);
+            if (runText == null) continue;
 
-        for (XWPFFooter footer : doc.getFooterList()) {
-            for (XWPFParagraph p : footer.getParagraphs()) {
-                replaceInParagraph(p, placeholder, replacement);
+            int idx = runText.indexOf(placeholder);
+            if (idx >= 0) {
+                String before = runText.substring(0, idx);
+                String after = runText.substring(idx + placeholder.length());
+
+                // Сохраняем стиль ДО удаления run
+                RunStyle style = extractRunStyle(run);
+
+                p.removeRun(i);
+                int newRunIdx = i;
+
+                if (!before.isEmpty()) {
+                    XWPFRun beforeRun = p.insertNewRun(newRunIdx++);
+                    beforeRun.setText(before);
+                    applyRunStyle(beforeRun, style);
+                }
+
+                for (int j = 0; j < parts.length; j++) {
+                    XWPFRun partRun = p.insertNewRun(newRunIdx++);
+                    partRun.setText(parts[j]);
+                    partRun.setVerticalAlignment(String.valueOf(formats[j]));
+
+                    // Копируем стиль, но убираем жирное начертание
+                    RunStyle nonBoldStyle = style;
+                    nonBoldStyle.isBold = false;
+                    applyRunStyle(partRun, nonBoldStyle);
+                }
+
+                if (!after.isEmpty()) {
+                    XWPFRun afterRun = p.insertNewRun(newRunIdx++);
+                    afterRun.setText(after);
+                    applyRunStyle(afterRun, style);
+                }
+                break;
             }
         }
     }
-    private static void replaceInParagraph(XWPFParagraph paragraph, String placeholder, String replacement) {
-        List<XWPFRun> runs = paragraph.getRuns();
-        StringBuilder fullText = new StringBuilder();
-        List<XWPFRun> runList = new ArrayList<>(runs);
+    // Вспомогательный класс для сохранения стиля
+    private static class RunStyle {
+        String color;
+        String fontFamily;
+        int fontSize;
+        boolean isBold;
+        boolean isItalic;
+        UnderlinePatterns underline;
+    }
+    // Безопасное извлечение стиля
+    private static RunStyle extractRunStyle(XWPFRun run) {
+        RunStyle style = new RunStyle();
+        try {
+            style.color = run.getColor();
+        } catch (Exception e) { style.color = null; }
 
-        // Собираем полный текст и проверяем наличие плейсхолдера
-        for (XWPFRun run : runList) {
-            String text = run.getText(0);
-            if (text != null) {
-                fullText.append(text);
-            }
-        }
+        try {
+            style.fontFamily = run.getFontFamily();
+        } catch (Exception e) { style.fontFamily = null; }
 
-        if (!fullText.toString().contains(placeholder)) {
-            return;
+        try {
+            style.fontSize = run.getFontSize();
+        } catch (Exception e) { style.fontSize = -1; }
+
+        try {
+            style.isBold = run.isBold();
+        } catch (Exception e) { style.isBold = false; }
+
+        try {
+            style.isItalic = run.isItalic();
+        } catch (Exception e) { style.isItalic = false; }
+
+        try {
+            style.underline = run.getUnderline();
+        } catch (Exception e) { style.underline = UnderlinePatterns.NONE; }
+
+        return style;
+    }
+
+    // Безопасное применение стиля
+    private static void applyRunStyle(XWPFRun target, RunStyle style) {
+        if (style == null) return;
+
+        if (style.color != null) target.setColor(style.color);
+        if (style.fontFamily != null) target.setFontFamily(style.fontFamily);
+        if (style.fontSize > 0) target.setFontSize(style.fontSize);
+
+        // Убираем жирное начертание для заменяемых полей
+        target.setBold(false);
+
+        target.setItalic(style.isItalic);
+        target.setUnderline(style.underline);
+    }
+    private static void replaceInParagraphSimple(XWPFParagraph p, String placeholder, String replacement) {
+        String fullText = p.getText();
+        if (fullText == null || !fullText.contains(placeholder)) return;
+
+        // Сохраняем все стили runs
+        List<RunStyle> styles = new ArrayList<>();
+        List<String> runTexts = new ArrayList<>();
+
+        for (XWPFRun run : p.getRuns()) {
+            styles.add(extractRunStyle(run));
+            runTexts.add(run.getText(0));
         }
 
         // Очищаем параграф
-        for (int i = runs.size() - 1; i >= 0; i--) {
-            paragraph.removeRun(i);
+        for (int i = p.getRuns().size() - 1; i >= 0; i--) {
+            p.removeRun(i);
         }
 
-        // Воссоздаём runs с сохранением форматирования
-        String[] parts = fullText.toString().split(Pattern.quote(placeholder), -1);
-        for (int i = 0; i < parts.length; i++) {
-            String part = parts[i];
+        // Восстанавливаем текст с заменой
+        String newText = fullText.replace(placeholder, replacement);
 
-            // Добавляем текст части
-            if (!part.isEmpty()) {
-                XWPFRun newRun = paragraph.createRun();
-                newRun.setText(part);
+        // Разбиваем новый текст на части, соответствующие оригинальным runs
+        int currentPos = 0;
+        for (int i = 0; i < runTexts.size(); i++) {
+            String originalRunText = runTexts.get(i);
+            if (originalRunText == null) continue;
 
-                // Копируем форматирование из оригинального run (если возможно)
-                if (!runList.isEmpty()) {
-                    XWPFRun sampleRun = runList.get(0);
-                    newRun.setFontFamily(sampleRun.getFontFamily());
-                    newRun.setFontSize(sampleRun.getFontSize());
-                    newRun.setBold(sampleRun.isBold());
-                    newRun.setItalic(sampleRun.isItalic());
-                    newRun.setUnderline(sampleRun.getUnderline());
+            int endPos = currentPos + originalRunText.length();
+            if (endPos > newText.length()) endPos = newText.length();
 
-                    // Исправление для версии POI 5.4.0
-                    Object vertAlign = sampleRun.getVerticalAlignment();
-                    if (vertAlign != null) {
-                        String alignStr = vertAlign.toString();
-                        if ("SUPERSCRIPT".equals(alignStr)) {
-                            newRun.setSubscript(VerticalAlign.SUPERSCRIPT);
-                        } else if ("SUBSCRIPT".equals(alignStr)) {
-                            newRun.setSubscript(VerticalAlign.SUBSCRIPT);
-                        }
-                    }
-                }
-            }
+            String part = newText.substring(currentPos, endPos);
+            currentPos = endPos;
 
-            // Добавляем замену между частями
-            if (i < parts.length - 1) {
-                XWPFRun replacementRun = paragraph.createRun();
-                replacementRun.setText(replacement);
+            XWPFRun newRun = p.createRun();
+            newRun.setText(part);
+            applyRunStyle(newRun, styles.get(i)); // Применяем оригинальный стиль
+        }
+        if (currentPos < newText.length()) {
+            String remaining = newText.substring(currentPos);
+            XWPFRun newRun = p.createRun();
+            newRun.setText(remaining);
+
+            // Применяем стиль последнего run'а
+            if (!styles.isEmpty()) {
+                RunStyle lastStyle = styles.get(styles.size() - 1);
+                lastStyle.isBold = false; // Убираем жирный
+                applyRunStyle(newRun, lastStyle);
             }
         }
     }
+
+    private static void copyRunStyle(XWPFRun target, XWPFRun source) {
+        if (source == null) return;
+
+        target.setColor(source.getColor());
+        target.setFontFamily(source.getFontFamily());
+        target.setFontSize(source.getFontSize());
+        target.setBold(source.isBold());
+        target.setItalic(source.isItalic());
+        target.setUnderline(source.getUnderline());
+        // Копирование других важных свойств
+        target.setStrike(source.isStrike());
+        target.setTextPosition(source.getTextPosition());
+    }
+
+    private static void replaceAllText(XWPFDocument doc, String placeholder, String replacement) {
+        // Обработка основного контента
+        replaceInBody(doc, placeholder, replacement);
+
+        // Обработка колонтитулов
+        for (XWPFHeader header : doc.getHeaderList()) {
+            replaceInBody(header, placeholder, replacement);
+        }
+        for (XWPFFooter footer : doc.getFooterList()) {
+            replaceInBody(footer, placeholder, replacement);
+        }
+    }
+
+    private static void replaceInBody(IBody body, String placeholder, String replacement) {
+        // Обработка параграфов
+        for (XWPFParagraph p : body.getParagraphs()) {
+            replaceInParagraphSimple(p, placeholder, replacement);
+        }
+
+        // Обработка таблиц
+        for (XWPFTable table : body.getTables()) {
+            for (XWPFTableRow row : table.getRows()) {
+                for (XWPFTableCell cell : row.getTableCells()) {
+                    for (XWPFParagraph p : cell.getParagraphs()) {
+                        replaceInParagraphSimple(p, placeholder, replacement);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void applySpecialFormatting(XWPFRun run, String text) {
+        // Настройки для специальных символов
+        if (text.contains("inf")) {
+            // Подстрочный текст
+            run.setSubscript(VerticalAlign.SUBSCRIPT);
+        }
+
+        if (text.contains("des") || text.contains("reg")) {
+            // Надстрочный текст
+            run.setSubscript(VerticalAlign.SUPERSCRIPT);
+        }
+
+        if (text.contains("ч") && text.contains("-1")) {
+            // Надстрочный текст для ч⁻¹
+            run.setText(text.replace("-1", ""));
+            XWPFRun superscript = run.getParagraph().createRun();
+            superscript.setSubscript(VerticalAlign.SUPERSCRIPT);
+            superscript.setText("−1"); // Используем длинное тире
+        }
+    }
+
 
     private static void replaceTableDataSafe(XWPFDocument doc, String tableTitle, List<Double> values) {
         if (values == null || values.isEmpty()) return;
