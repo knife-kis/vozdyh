@@ -17,222 +17,179 @@ public class DocxGenerator {
         String rawProtocol = model.getProtocolNumber();
         boolean useDefaultProtocol = rawProtocol == null || rawProtocol.isBlank();
         String protocolNumber = useDefaultProtocol ? "10" : rawProtocol;
+
         File templateFile = new File(templatePath);
         if (!templateFile.exists()) {
             throw new FileNotFoundException("Файл шаблона не найден: " + templatePath);
         }
-        try (XWPFDocument doc = new XWPFDocument(new FileInputStream(templatePath))) {
 
-            // Основные замены
-//            String protocolNumber = model.getProtocolNumber();
-            int year = model.getTestDate().getYear() % 100;
+        try (XWPFDocument doc = new XWPFDocument(new FileInputStream(templatePath))) {
             LocalDate date = model.getTestDate();
             LocalDate nextDay = date.plusDays(1);
+            int year = date.getYear() % 100;
 
-            // Форматы
+            // Форматированные значения
             String nextDayStr = String.format("%02d", nextDay.getDayOfMonth());
             String currentMonth = date.getMonth().getDisplayName(TextStyle.FULL, new Locale("ru"));
             String fullYear = String.valueOf(date.getYear());
-
-            // Замена новых спец. полей
-            replaceAllText(doc, "[номер/год]", protocolNumber + "/" + year);
-            replaceAllText(doc, "[следующий день]", nextDayStr);
-            replaceAllText(doc, "[текущий месяц]", currentMonth);
-            replaceAllText(doc, "[текущий год]", fullYear);
-            replaceAllText(doc, "[текущая дата]", date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
-            replaceAllText(doc, "[ProtocolNumber]", protocolNumber);
-            replaceAllText(doc, "[TestDate]", date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
-            replaceAllText(doc, "[Customer]",
-                    model.getCustomer() != null ? model.getCustomer() : "");
-
-            replaceAllText(doc, "[ObjectName]",
-                    model.getObjectName() != null ? model.getObjectName() : "");
-            replaceAllText(doc, "[наименование объекта]", model.getObjectName());
-            replaceAllText(doc, "[следующий день]", nextDayStr);
-            replaceAllText(doc, "[текущий месяц]", currentMonth);
-            replaceAllText(doc, "[текущий год]", fullYear);
-            replaceAllText(doc, "[Наименование заказчика]", model.getCustomer());
-            replaceAllText(doc, "[юридический адрес заказчика]", model.getCustomerAddress());
-            replaceAllText(doc, "[наименование объекта]", model.getObjectName());
-            replaceAllText(doc, "[вид стен и их толщина]", model.getWallType());
-            replaceAllText(doc, "[вид оконных блоков]", model.getWindowType());
-            replaceAllText(doc, "[естественная/искусственная]", model.getVentilationType());
-            replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
-                    String.valueOf(model.getAirExchangeNorm()));
             String formattedDate = date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-            replaceAllText(doc, "[текущая дата]", formattedDate);
+
+            // Основные замены
+            replaceCommonPlaceholders(doc, model, protocolNumber, year, nextDayStr, currentMonth, fullYear, formattedDate);
+
+            // Обработка комнат
+            processRooms(doc, model);
+
+            // Подсветка номера протокола при необходимости
             if (useDefaultProtocol) {
-                for (XWPFParagraph p : doc.getParagraphs()) {
-                    for (XWPFRun run : p.getRuns()) {
-                        String txt = run.getText(0);
-                        if (txt != null && txt.equals(protocolNumber)) {
-                            // Задаём подсветку жёлтым
-                            run.setTextHighlightColor("yellow");
-                        }
-                    }
-                }
-                // и тоже в таблицах, если нужно
-                for (XWPFTable tbl : doc.getTables()) {
-                    for (XWPFTableRow row : tbl.getRows()) {
-                        for (XWPFTableCell cell : row.getTableCells()) {
-                            for (XWPFParagraph p : cell.getParagraphs()) {
-                                for (XWPFRun run : p.getRuns()) {
-                                    String txt = run.getText(0);
-                                    if (txt != null && txt.equals(protocolNumber)) {
-                                        run.setTextHighlightColor("yellow");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // Обработка комнат с проверкой размера списка
-            List<RoomData> rooms = model.getRooms();
-            for (int i = 0; i < rooms.size(); i++) {
-                RoomData room = rooms.get(i);
-                int roomIndex = i + 1;
-
-                // Основные замены
-                replaceAllText(doc, "[Room" + roomIndex + ".Name]",
-                        room.getName() != null ? room.getName() : "");
-                replaceAllText(doc, "[Room" + roomIndex + ".Floor]",
-                        room.getFloor() != null ? room.getFloor() : "");
-                replaceAllText(doc, "[Room" + roomIndex + ".Area]",
-                        String.format("%.2f", room.getArea()));
-                replaceAllText(doc, "[Room" + roomIndex + ".Height]",
-                        String.format("%.2f", room.getHeight()));
-                replaceAllText(doc, "[Room" + roomIndex + ".Volume]",
-                        String.format("%.2f", room.getVolume()));
-                replaceAllText(doc,
-                        "[Room" + roomIndex + ".Floor]",
-                        room.getFloor() != null ? room.getFloor() : ""
-                );
-                replaceAllText(doc,
-                        "[Room" + roomIndex + ".WindowArea]",
-                        String.format("%.2f", room.getWindowArea())
-                );
-
-                // Безопасный расчет среднего
-                List<Double> qValues = room.getQValues();
-                double avg = 0;
-                if (qValues != null && !qValues.isEmpty()) {
-                    avg = qValues.stream()
-                            .limit(5)
-                            .mapToDouble(Double::doubleValue)
-                            .average()
-                            .orElse(0);
-                }
-                replaceAllText(doc, "[Room" + roomIndex + ".расчетная величина]", String.format("%.2f", avg));
-                replaceAllText(doc, "[Room" + roomIndex + ".n50]", String.format("%.2f", room.getN50()));
-                replaceAllText(doc, "[Room" + roomIndex + ".Volume]", String.format("%.2f", room.getVolume()));
-                replaceAllText(doc, "[Room" + roomIndex + ".QmAvg]", String.format("%.2f", avg));
-                replaceAllText(doc, "[Room" + roomIndex + ".N50]", String.format("%.2f", room.getN50()));
-
-                // Безопасная замена табличных данных
-//                replaceTableDataSafe(doc, "Таблица " + (i + 2), qValues);
-                replaceAnchoredTableCells(doc, model.getRooms());
-
-                // Дополнительные замены для таблицы
-                replaceAllText(doc, "[угловая/рядовая/торцевая квартира №]",
-                        room.getName() != null ? room.getName() : "");
-                replaceAllText(doc, "[номер этажа]",
-                        room.getFloor() != null ? room.getFloor() : "");
-                replaceAllText(doc, "[пло-щадь внешней стены]",
-                        String.format("%.2f", room.getArea())); // Пример, можно добавить отдельное поле
-                replaceAllText(doc, "[площадь окон]",
-                        String.format("%.2f", room.getWindowArea())); // Пример, нужно добавить поле в RoomData
-
+                highlightProtocolNumber(doc, protocolNumber);
             }
 
             // Генерация уникального имени файла
-            String baseName = "Протокол_испытаний";
-            String extension = ".docx";
-            File outputFile;
-            int counter = 1;
-
-            do {
-                String fileName = counter == 1 ?
-                        baseName + extension :
-                        baseName + "_" + counter + extension;
-                outputFile = new File(fileName);
-                counter++;
-            } while (outputFile.exists());
-
-            // Сохранение результата
-            try (FileOutputStream out = new FileOutputStream(outputFile)) {
-                doc.write(out);
-            }
-            return outputFile;
-
+            return saveDocument(doc);
         }
     }
+    private static void replaceCommonPlaceholders(XWPFDocument doc, MainModel model,
+                                                  String protocolNumber, int year,
+                                                  String nextDayStr, String currentMonth,
+                                                  String fullYear, String formattedDate) {
+        // Основные замены
+        replaceAllText(doc, "[номер/год]", protocolNumber + "/" + year);
+        replaceAllText(doc, "[следующий день]", nextDayStr);
+        replaceAllText(doc, "[текущий месяц]", currentMonth);
+        replaceAllText(doc, "[текущий год]", fullYear);
+        replaceAllText(doc, "[текущая дата]", formattedDate);
+        replaceAllText(doc, "[ProtocolNumber]", protocolNumber);
+        replaceAllText(doc, "[TestDate]", formattedDate);
 
-    private static void replaceSpecialPlaceholder(XWPFDocument doc, String placeholder,
-                                                  String[] parts, VerticalAlign[] formats) {
-        // Обработка в параграфах
-        for (XWPFParagraph p : doc.getParagraphs()) {
-            replaceSpecialInParagraph(p, placeholder, parts, formats); // Исправленный вызов
+        // Замены связанные с объектом
+        replaceAllText(doc, "[Customer]", getSafeValue(model.getCustomer()));
+        replaceAllText(doc, "[ObjectName]", getSafeValue(model.getObjectName()));
+        replaceAllText(doc, "[наименование объекта]", getSafeValue(model.getObjectName()));
+        replaceAllText(doc, "[Наименование заказчика]", getSafeValue(model.getCustomer()));
+        replaceAllText(doc, "[юридический адрес заказчика]", getSafeValue(model.getCustomerAddress()));
+
+        // Технические параметры
+        replaceAllText(doc, "[вид стен и их толщина]", getSafeValue(model.getWallType()));
+        replaceAllText(doc, "[вид оконных блоков]", getSafeValue(model.getWindowType()));
+        replaceAllText(doc, "[естественная/искусственная]", getSafeValue(model.getVentilationType()));
+        replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
+                String.valueOf(model.getAirExchangeNorm()));
+    }
+
+    private static String getSafeValue(String value) {
+        return value != null ? value : "";
+    }
+
+    private static void processRooms(XWPFDocument doc, MainModel model) {
+        List<RoomData> rooms = model.getRooms();
+
+        for (int i = 0; i < rooms.size(); i++) {
+            RoomData room = rooms.get(i);
+            int roomIndex = i + 1;
+
+            // Основные параметры комнаты
+            replaceRoomData(doc, room, roomIndex);
         }
 
-        // Обработка в таблицах
-        for (XWPFTable table : doc.getTables()) {
-            for (XWPFTableRow row : table.getRows()) {
+        // Обработка табличных данных (один раз для всех комнат)
+        replaceAnchoredTableCells(doc, rooms);
+    }
+
+    private static void replaceRoomData(XWPFDocument doc, RoomData room, int roomIndex) {
+        // Основные параметры
+        replaceAllText(doc, "[Room" + roomIndex + ".Name]", getSafeValue(room.getName()));
+        replaceAllText(doc, "[Room" + roomIndex + ".Floor]", getSafeValue(room.getFloor()));
+        replaceAllText(doc, "[Room" + roomIndex + ".Area]", formatDouble(room.getArea()));
+        replaceAllText(doc, "[Room" + roomIndex + ".Height]", formatDouble(room.getHeight()));
+        replaceAllText(doc, "[Room" + roomIndex + ".Volume]", formatDouble(room.getVolume()));
+        replaceAllText(doc, "[Room" + roomIndex + ".WindowArea]", formatDouble(room.getWindowArea()));
+
+        // Расчетные параметры
+        double avg = calculateAverage(room.getQValues());
+        replaceAllText(doc, "[Room" + roomIndex + ".расчетная величина]", formatDouble(avg));
+        replaceAllText(doc, "[Room" + roomIndex + ".n50]", formatDouble(room.getN50()));
+        replaceAllText(doc, "[Room" + roomIndex + ".QmAvg]", formatDouble(avg));
+        replaceAllText(doc, "[Room" + roomIndex + ".N50]", formatDouble(room.getN50()));
+
+        // Дополнительные замены
+        replaceAllText(doc, "[угловая/рядовая/торцевая квартира №]", getSafeValue(room.getName()));
+        replaceAllText(doc, "[номер этажа]", getSafeValue(room.getFloor()));
+        replaceAllText(doc, "[пло-щадь внешней стены]", formatDouble(room.getArea()));
+        replaceAllText(doc, "[площадь окон]", formatDouble(room.getWindowArea()));
+    }
+
+    private static String formatDouble(double value) {
+        return String.format("%.2f", value);
+    }
+
+    private static double calculateAverage(List<Double> values) {
+        if (values == null || values.isEmpty()) return 0;
+        return values.stream()
+                .limit(5)
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0);
+    }
+
+    private static void highlightProtocolNumber(XWPFDocument doc, String protocolNumber) {
+        // Обработка основного текста
+        for (XWPFParagraph p : doc.getParagraphs()) {
+            highlightRuns(p.getRuns(), protocolNumber);
+        }
+
+        // Обработка таблиц
+        for (XWPFTable tbl : doc.getTables()) {
+            for (XWPFTableRow row : tbl.getRows()) {
                 for (XWPFTableCell cell : row.getTableCells()) {
                     for (XWPFParagraph p : cell.getParagraphs()) {
-                        replaceSpecialInParagraph(p, placeholder, parts, formats); // Исправленный вызов
+                        highlightRuns(p.getRuns(), protocolNumber);
                     }
                 }
             }
         }
-    }
-    private static void replaceSpecialInParagraph(XWPFParagraph p, String placeholder,
-                                                  String[] parts, VerticalAlign[] formats) {
-        List<XWPFRun> runs = p.getRuns();
 
-        for (int i = 0; i < runs.size(); i++) {
-            XWPFRun run = runs.get(i);
-            String runText = run.getText(0);
-            if (runText == null) continue;
-
-            int idx = runText.indexOf(placeholder);
-            if (idx >= 0) {
-                String before = runText.substring(0, idx);
-                String after = runText.substring(idx + placeholder.length());
-
-                // Сохраняем стиль ДО удаления run
-                RunStyle style = extractRunStyle(run);
-
-                p.removeRun(i);
-                int newRunIdx = i;
-
-                if (!before.isEmpty()) {
-                    XWPFRun beforeRun = p.insertNewRun(newRunIdx++);
-                    beforeRun.setText(before);
-                    applyRunStyle(beforeRun, style);
-                }
-
-                for (int j = 0; j < parts.length; j++) {
-                    XWPFRun partRun = p.insertNewRun(newRunIdx++);
-                    partRun.setText(parts[j]);
-                    partRun.setVerticalAlignment(String.valueOf(formats[j]));
-
-                    // Копируем стиль, но убираем жирное начертание
-                    RunStyle nonBoldStyle = style;
-                    nonBoldStyle.isBold = false;
-                    applyRunStyle(partRun, nonBoldStyle);
-                }
-
-                if (!after.isEmpty()) {
-                    XWPFRun afterRun = p.insertNewRun(newRunIdx++);
-                    afterRun.setText(after);
-                    applyRunStyle(afterRun, style);
-                }
-                break;
+        // Обработка колонтитулов
+        for (XWPFHeader header : doc.getHeaderList()) {
+            for (XWPFParagraph p : header.getParagraphs()) {
+                highlightRuns(p.getRuns(), protocolNumber);
+            }
+        }
+        for (XWPFFooter footer : doc.getFooterList()) {
+            for (XWPFParagraph p : footer.getParagraphs()) {
+                highlightRuns(p.getRuns(), protocolNumber);
             }
         }
     }
-    // Вспомогательный класс для сохранения стиля
+
+    private static void highlightRuns(List<XWPFRun> runs, String text) {
+        for (XWPFRun run : runs) {
+            String runText = run.getText(0);
+            if (runText != null && runText.equals(text)) {
+                run.setTextHighlightColor("yellow");
+            }
+        }
+    }
+
+    private static File saveDocument(XWPFDocument doc) throws IOException {
+        String baseName = "Протокол_испытаний";
+        String extension = ".docx";
+        File outputFile;
+        int counter = 1;
+
+        do {
+            String fileName = counter == 1
+                    ? baseName + extension
+                    : baseName + "_" + counter + extension;
+            outputFile = new File(fileName);
+            counter++;
+        } while (outputFile.exists());
+
+        try (FileOutputStream out = new FileOutputStream(outputFile)) {
+            doc.write(out);
+        }
+        return outputFile;
+    }
     private static class RunStyle {
         String color;
         String fontFamily;
@@ -241,47 +198,24 @@ public class DocxGenerator {
         boolean isItalic;
         UnderlinePatterns underline;
     }
-    // Безопасное извлечение стиля
+
     private static RunStyle extractRunStyle(XWPFRun run) {
         RunStyle style = new RunStyle();
-        try {
-            style.color = run.getColor();
-        } catch (Exception e) { style.color = null; }
-
-        try {
-            style.fontFamily = run.getFontFamily();
-        } catch (Exception e) { style.fontFamily = null; }
-
-        try {
-            style.fontSize = run.getFontSize();
-        } catch (Exception e) { style.fontSize = -1; }
-
-        try {
-            style.isBold = run.isBold();
-        } catch (Exception e) { style.isBold = false; }
-
-        try {
-            style.isItalic = run.isItalic();
-        } catch (Exception e) { style.isItalic = false; }
-
-        try {
-            style.underline = run.getUnderline();
-        } catch (Exception e) { style.underline = UnderlinePatterns.NONE; }
-
+        try { style.color = run.getColor(); } catch (Exception e) { style.color = null; }
+        try { style.fontFamily = run.getFontFamily(); } catch (Exception e) { style.fontFamily = null; }
+        try { style.fontSize = run.getFontSize(); } catch (Exception e) { style.fontSize = -1; }
+        try { style.isBold = run.isBold(); } catch (Exception e) { style.isBold = false; }
+        try { style.isItalic = run.isItalic(); } catch (Exception e) { style.isItalic = false; }
+        try { style.underline = run.getUnderline(); } catch (Exception e) { style.underline = UnderlinePatterns.NONE; }
         return style;
     }
 
-    // Безопасное применение стиля
     private static void applyRunStyle(XWPFRun target, RunStyle style) {
         if (style == null) return;
-
         if (style.color != null) target.setColor(style.color);
         if (style.fontFamily != null) target.setFontFamily(style.fontFamily);
         if (style.fontSize > 0) target.setFontSize(style.fontSize);
-
-        // Убираем жирное начертание для заменяемых полей
-        target.setBold(false);
-
+        target.setBold(style.isBold);
         target.setItalic(style.isItalic);
         target.setUnderline(style.underline);
     }
