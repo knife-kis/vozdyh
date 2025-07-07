@@ -40,6 +40,7 @@ public class MainModel {
 
     public void calculateCoefficients() {
         for (RoomData room : rooms) {
+            // Используем высоту и площадь для расчета объема
             double volume = room.getArea() * room.getHeight();
             room.setVolume(volume);
 

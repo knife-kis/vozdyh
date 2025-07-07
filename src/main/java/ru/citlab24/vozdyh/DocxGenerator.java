@@ -14,6 +14,9 @@ import org.apache.poi.xwpf.usermodel.*;
 
 public class DocxGenerator {
     public static File generateDocument(MainModel model, String templatePath) throws IOException {
+        String rawProtocol = model.getProtocolNumber();
+        boolean useDefaultProtocol = rawProtocol == null || rawProtocol.isBlank();
+        String protocolNumber = useDefaultProtocol ? "10" : rawProtocol;
         File templateFile = new File(templatePath);
         if (!templateFile.exists()) {
             throw new FileNotFoundException("Файл шаблона не найден: " + templatePath);
@@ -21,7 +24,7 @@ public class DocxGenerator {
         try (XWPFDocument doc = new XWPFDocument(new FileInputStream(templatePath))) {
 
             // Основные замены
-            String protocolNumber = model.getProtocolNumber();
+//            String protocolNumber = model.getProtocolNumber();
             int year = model.getTestDate().getYear() % 100;
             LocalDate date = model.getTestDate();
             LocalDate nextDay = date.plusDays(1);
@@ -39,8 +42,11 @@ public class DocxGenerator {
             replaceAllText(doc, "[текущая дата]", date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
             replaceAllText(doc, "[ProtocolNumber]", protocolNumber);
             replaceAllText(doc, "[TestDate]", date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
-            replaceAllText(doc, "[Customer]", model.getCustomer());
-            replaceAllText(doc, "[ObjectName]", model.getObjectName());
+            replaceAllText(doc, "[Customer]",
+                    model.getCustomer() != null ? model.getCustomer() : "");
+
+            replaceAllText(doc, "[ObjectName]",
+                    model.getObjectName() != null ? model.getObjectName() : "");
             replaceAllText(doc, "[наименование объекта]", model.getObjectName());
             replaceAllText(doc, "[следующий день]", nextDayStr);
             replaceAllText(doc, "[текущий месяц]", currentMonth);
@@ -55,20 +61,57 @@ public class DocxGenerator {
                     String.valueOf(model.getAirExchangeNorm()));
             String formattedDate = date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
             replaceAllText(doc, "[текущая дата]", formattedDate);
-            System.out.println("Customer: " + model.getCustomer());
-            System.out.println("Address: " + model.getCustomerAddress());
-            System.out.println("Date: " + formattedDate);
-
+            if (useDefaultProtocol) {
+                for (XWPFParagraph p : doc.getParagraphs()) {
+                    for (XWPFRun run : p.getRuns()) {
+                        String txt = run.getText(0);
+                        if (txt != null && txt.equals(protocolNumber)) {
+                            // Задаём подсветку жёлтым
+                            run.setTextHighlightColor("yellow");
+                        }
+                    }
+                }
+                // и тоже в таблицах, если нужно
+                for (XWPFTable tbl : doc.getTables()) {
+                    for (XWPFTableRow row : tbl.getRows()) {
+                        for (XWPFTableCell cell : row.getTableCells()) {
+                            for (XWPFParagraph p : cell.getParagraphs()) {
+                                for (XWPFRun run : p.getRuns()) {
+                                    String txt = run.getText(0);
+                                    if (txt != null && txt.equals(protocolNumber)) {
+                                        run.setTextHighlightColor("yellow");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Обработка комнат с проверкой размера списка
             List<RoomData> rooms = model.getRooms();
             for (int i = 0; i < rooms.size(); i++) {
                 RoomData room = rooms.get(i);
                 int roomIndex = i + 1;
 
-                replaceAllText(doc, "[Room" + roomIndex + ".Name]", room.getName());
-                replaceAllText(doc, "[Room" + roomIndex + ".Area]", String.format("%.2f", room.getArea()));
-                replaceAllText(doc, "[Room" + roomIndex + ".Height]", String.format("%.2f", room.getHeight()));
-                replaceAllText(doc, "[Room" + roomIndex + ".Volume]", String.format("%.2f", room.getVolume()));
+                // Основные замены
+                replaceAllText(doc, "[Room" + roomIndex + ".Name]",
+                        room.getName() != null ? room.getName() : "");
+                replaceAllText(doc, "[Room" + roomIndex + ".Floor]",
+                        room.getFloor() != null ? room.getFloor() : "");
+                replaceAllText(doc, "[Room" + roomIndex + ".Area]",
+                        String.format("%.2f", room.getArea()));
+                replaceAllText(doc, "[Room" + roomIndex + ".Height]",
+                        String.format("%.2f", room.getHeight()));
+                replaceAllText(doc, "[Room" + roomIndex + ".Volume]",
+                        String.format("%.2f", room.getVolume()));
+                replaceAllText(doc,
+                        "[Room" + roomIndex + ".Floor]",
+                        room.getFloor() != null ? room.getFloor() : ""
+                );
+                replaceAllText(doc,
+                        "[Room" + roomIndex + ".WindowArea]",
+                        String.format("%.2f", room.getWindowArea())
+                );
 
                 // Безопасный расчет среднего
                 List<Double> qValues = room.getQValues();
@@ -80,11 +123,26 @@ public class DocxGenerator {
                             .average()
                             .orElse(0);
                 }
+                replaceAllText(doc, "[Room" + roomIndex + ".расчетная величина]", String.format("%.2f", avg));
+                replaceAllText(doc, "[Room" + roomIndex + ".n50]", String.format("%.2f", room.getN50()));
+                replaceAllText(doc, "[Room" + roomIndex + ".Volume]", String.format("%.2f", room.getVolume()));
                 replaceAllText(doc, "[Room" + roomIndex + ".QmAvg]", String.format("%.2f", avg));
                 replaceAllText(doc, "[Room" + roomIndex + ".N50]", String.format("%.2f", room.getN50()));
 
                 // Безопасная замена табличных данных
-                replaceTableDataSafe(doc, "Таблица " + (i + 2), qValues);
+//                replaceTableDataSafe(doc, "Таблица " + (i + 2), qValues);
+                replaceAnchoredTableCells(doc, model.getRooms());
+
+                // Дополнительные замены для таблицы
+                replaceAllText(doc, "[угловая/рядовая/торцевая квартира №]",
+                        room.getName() != null ? room.getName() : "");
+                replaceAllText(doc, "[номер этажа]",
+                        room.getFloor() != null ? room.getFloor() : "");
+                replaceAllText(doc, "[пло-щадь внешней стены]",
+                        String.format("%.2f", room.getArea())); // Пример, можно добавить отдельное поле
+                replaceAllText(doc, "[площадь окон]",
+                        String.format("%.2f", room.getWindowArea())); // Пример, нужно добавить поле в RoomData
+
             }
 
             // Генерация уникального имени файла
@@ -293,16 +351,20 @@ public class DocxGenerator {
     }
 
     private static void replaceAllText(XWPFDocument doc, String placeholder, String replacement) {
+        // Заменяем null на пустую строку
+        String safeReplacement = replacement == null ? "" : replacement;
+
         // Обработка основного контента
-        replaceInBody(doc, placeholder, replacement);
+        replaceInBody(doc, placeholder, safeReplacement);
 
         // Обработка колонтитулов
         for (XWPFHeader header : doc.getHeaderList()) {
-            replaceInBody(header, placeholder, replacement);
+            replaceInBody(header, placeholder, safeReplacement);
         }
         for (XWPFFooter footer : doc.getFooterList()) {
-            replaceInBody(footer, placeholder, replacement);
+            replaceInBody(footer, placeholder, safeReplacement);
         }
+
     }
 
     private static void replaceInBody(IBody body, String placeholder, String replacement) {
@@ -344,20 +406,40 @@ public class DocxGenerator {
         }
     }
 
-
+    private static void replaceAnchoredTableCells(XWPFDocument doc, List<RoomData> rooms) {
+        // rooms.get(0) → первая комната → таблица index=1, rooms.get(1)→таблица index=2 и т.д.
+        for (int t = 0; t < rooms.size(); t++) {
+            List<Double> qValues = rooms.get(t).getQValues();
+            // для каждой из 5 строк и 5 столбцов
+            for (int r = 0; r < 5; r++) {
+                for (int c = 0; c < 5; c++) {
+                    // номер таблицы: t+1
+                    // строка: r+1, столбец c+1
+                    String placeholder = String.format("[Qm%d-%d-%d]", t+1, r+1, c+1);
+                    int idx = r * 5 + c;
+                    String replacement = idx < qValues.size()
+                            ? String.format("%.1f", qValues.get(idx))
+                            : "";
+                    // простая замена текста (в параграфах и в таблицах)
+                    replaceAllText(doc, placeholder, replacement);
+                }
+            }
+        }
+    }
     private static void replaceTableDataSafe(XWPFDocument doc, String tableTitle, List<Double> values) {
         if (values == null || values.isEmpty()) return;
 
         for (XWPFTable table : doc.getTables()) {
             if (table.getText().contains(tableTitle)) {
-                int startRow = 7; // Начало данных в таблице
+                int startRow = 1; // предположим: первая строка — заголовок таблицы (с ΔP Qm Qm Qm...)
                 int valuesIndex = 0;
 
-                for (int i = 0; i < 5; i++) { // 5 строк данных
+                for (int i = 0; i < 5; i++) { // 5 строк по ΔP (50, 40, 30, 20, 10)
                     if ((startRow + i) >= table.getRows().size()) break;
-
                     XWPFTableRow row = table.getRow(startRow + i);
-                    for (int j = 1; j <= 5; j++) { // 5 столбцов Qm
+
+                    // Столбцы 1-5: Qm (0 — это ΔP, пропускаем)
+                    for (int j = 1; j <= 5; j++) {
                         if (valuesIndex >= values.size()) break;
                         if (j >= row.getTableCells().size()) break;
 
@@ -368,7 +450,7 @@ public class DocxGenerator {
                         run.setText(String.format("%.1f", values.get(valuesIndex++)));
                     }
                 }
-                break;
+                break; // таблицу нашли и заполнили — выходим
             }
         }
     }

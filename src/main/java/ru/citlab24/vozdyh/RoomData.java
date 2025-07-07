@@ -15,7 +15,9 @@ public class RoomData {
     private final DoubleProperty volume = new SimpleDoubleProperty(0);
     private final DoubleProperty coefficient = new SimpleDoubleProperty(0);
     private final DoubleProperty n50 = new SimpleDoubleProperty(0);
+    private final DoubleProperty windowArea = new SimpleDoubleProperty(0);
     private final List<Double> qValues = new ArrayList<>();
+    private StringProperty floor = new SimpleStringProperty("");
 
     public String getName() {
         return name.get();
@@ -36,7 +38,28 @@ public class RoomData {
     public DoubleProperty areaProperty() {
         return area;
     }
+    public String getFloor() {
+        return floor.get();
+    }
+    public double getWindowArea() {
+        return windowArea.get();
+    }
 
+    public DoubleProperty windowAreaProperty() {
+        return windowArea;
+    }
+
+    public void setWindowArea(double windowArea) {
+        this.windowArea.set(windowArea);
+    }
+
+    public StringProperty floorProperty() {
+        return floor;
+    }
+
+    public void setFloor(String floor) {
+        this.floor.set(floor);
+    }
     public void setArea(double area) {
         this.area.set(area);
     }

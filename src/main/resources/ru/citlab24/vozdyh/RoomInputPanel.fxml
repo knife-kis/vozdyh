@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ru.citlab24.vozdyh.RoomInputPanel"
+      spacing="10">
+    <Label text="Данные помещения #${index}:" style="-fx-font-weight: bold;"/>
+    <GridPane hgap="10" vgap="10">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="40"/>
+            <ColumnConstraints percentWidth="60"/>
+        </columnConstraints>
+
+        <Label text="Наименование:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="nameField" promptText="Например: угловая квартира №2-1"
+                   GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Этаж:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="floorField" promptText="Введите этаж"
+                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Площадь (м²):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="areaField" promptText="Площадь помещения"
+                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Площадь окон (м²):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="windowAreaField" promptText="Площадь окон"
+                   GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Высота (м):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="heightField" promptText="Высота потолков"
+                   GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="Объем:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <Label fx:id="volumeLabel" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+    </GridPane>
+</VBox>

@@ -1,4 +1,4 @@
-package ru.citlab24.vozdyh;
+package ru.citlab24.vozdyh.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;

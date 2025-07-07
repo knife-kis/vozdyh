@@ -7,4 +7,6 @@ module ru.citlab24.vozdyh {
 
     opens ru.citlab24.vozdyh to javafx.fxml;
     exports ru.citlab24.vozdyh;
+    exports ru.citlab24.vozdyh.controllers;
+    opens ru.citlab24.vozdyh.controllers to javafx.fxml;
 }

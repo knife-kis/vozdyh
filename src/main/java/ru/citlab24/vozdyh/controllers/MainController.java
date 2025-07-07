@@ -1,9 +1,13 @@
-package ru.citlab24.vozdyh;
+package ru.citlab24.vozdyh.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.util.converter.NumberStringConverter;
+import ru.citlab24.vozdyh.DocxGenerator;
+import ru.citlab24.vozdyh.MainModel;
+import ru.citlab24.vozdyh.RoomData;
+import ru.citlab24.vozdyh.RoomInputPanel;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +50,9 @@ public class MainController {
 
         buildingTypeChoiceBox.getItems().addAll("Жилое", "Общественное");
         applyRoomCountButton.setOnAction(event -> handleRoomCountApply());
+
+        roomCountField.setText("3");
+        handleRoomCountApply(); // инициализировать три панели
     }
     @FXML
     private void handleRoomCountApply() {
