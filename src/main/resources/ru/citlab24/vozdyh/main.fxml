@@ -83,7 +83,7 @@
             <VBox spacing="10">
                 <HBox alignment="CENTER_LEFT" spacing="10">
                     <Label text="Количество помещений:"/>
-                    <TextField fx:id="roomCountField" promptText="Введите число" prefWidth="100"/>
+                    <TextField fx:id="roomCountField" promptText="Введите число" prefWidth="100" text="3"/>
                     <Button fx:id="applyRoomCountButton" text="Применить"/>
                 </HBox>
                 <ScrollPane fitToWidth="true">

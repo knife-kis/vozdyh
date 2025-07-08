@@ -1,5 +1,6 @@
 package ru.citlab24.vozdyh.controllers;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -47,12 +48,19 @@ public class MainController {
         windowTypeField.textProperty().bindBidirectional(model.windowTypeProperty());
         ventilationTypeChoiceBox.getItems().addAll("естественная", "искусственная");
         ventilationTypeChoiceBox.valueProperty().bindBidirectional(model.ventilationTypeProperty());
-
         buildingTypeChoiceBox.getItems().addAll("Жилое", "Общественное");
+
+        // Настройка обработчика для кнопки
         applyRoomCountButton.setOnAction(event -> handleRoomCountApply());
 
+        // Установка значения по умолчанию
         roomCountField.setText("3");
-        handleRoomCountApply(); // инициализировать три панели
+
+        // Отложенная инициализация комнат
+        Platform.runLater(() -> {
+            initializeRooms(3);
+        });
+
     }
     @FXML
     private void handleRoomCountApply() {
@@ -88,9 +96,6 @@ public class MainController {
             roomPanels.add(panel);
             roomsContainer.getChildren().add(panel);
         }
-
-        // Обновляем поле с количеством комнат
-        roomCountField.setText(String.valueOf(count));
     }
 
     @FXML
