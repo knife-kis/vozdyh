@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 import org.apache.poi.xwpf.usermodel.VerticalAlign;
-
 import org.apache.poi.xwpf.usermodel.*;
+import ru.citlab24.vozdyh.service.WeatherService;
 
 public class DocxGenerator {
     public static File generateDocument(MainModel model, String templatePath) throws IOException {
+        WeatherService.WeatherData weather = WeatherService.getKrasnoyarskWeather();
         String rawProtocol = model.getProtocolNumber();
         boolean useDefaultProtocol = rawProtocol == null || rawProtocol.isBlank();
         String protocolNumber = useDefaultProtocol ? "10" : rawProtocol;
@@ -22,6 +22,7 @@ public class DocxGenerator {
         if (!templateFile.exists()) {
             throw new FileNotFoundException("Файл шаблона не найден: " + templatePath);
         }
+        model.setPressure(weather.getPressure());
 
         try (XWPFDocument doc = new XWPFDocument(new FileInputStream(templatePath))) {
             LocalDate date = model.getTestDate();
@@ -42,11 +43,6 @@ public class DocxGenerator {
 
             // +++ ДОБАВЛЕНО: Расчет статистик +++
             calculateAndReplaceSummary(doc, model);
-
-            // Подсветка номера протокола при необходимости
-            if (useDefaultProtocol) {
-                highlightProtocolNumber(doc, protocolNumber);
-            }
 
             // Генерация уникального имени файла
             return saveDocument(doc);
@@ -103,7 +99,98 @@ public class DocxGenerator {
         replaceAllText(doc, "[Класс]", getSafeValue(model.getBuildingClass()));
         replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
                 String.valueOf(model.getAirExchangeNorm()));
-//        replaceAllText(doc, "[Класс]", model.getBuildingType());
+        replaceCheMinusOneWithSuperscript(doc);
+        replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
+//        replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()));
+//        replaceAllText(doc, "[температура]", formatDouble(model.getTemperature()));;
+    }
+
+    private static void replaceCheMinusOneWithSuperscript(XWPFDocument doc) {
+        // Обработка всех элементов документа
+        for (XWPFParagraph p : doc.getParagraphs()) {
+            replaceInParagraphCheMinusOne(p);
+        }
+
+        // Обработка таблиц
+        for (XWPFTable tbl : doc.getTables()) {
+            for (XWPFTableRow row : tbl.getRows()) {
+                for (XWPFTableCell cell : row.getTableCells()) {
+                    for (XWPFParagraph p : cell.getParagraphs()) {
+                        replaceInParagraphCheMinusOne(p);
+                    }
+                }
+            }
+        }
+
+        // Обработка колонтитулов
+        for (XWPFHeader header : doc.getHeaderList()) {
+            for (XWPFParagraph p : header.getParagraphs()) {
+                replaceInParagraphCheMinusOne(p);
+            }
+        }
+        for (XWPFFooter footer : doc.getFooterList()) {
+            for (XWPFParagraph p : footer.getParagraphs()) {
+                replaceInParagraphCheMinusOne(p);
+            }
+        }
+    }
+
+    private static void replaceInParagraphCheMinusOne(XWPFParagraph p) {
+        List<XWPFRun> runs = p.getRuns();
+        for (int i = 0; i < runs.size(); i++) {
+            XWPFRun run = runs.get(i);
+            String text = run.getText(0);
+            if (text != null && text.contains("ч-1")) {
+                // Сохраняем стиль
+                String color = run.getColor();
+                String fontFamily = run.getFontFamily();
+                int fontSize = run.getFontSize();
+                boolean bold = run.isBold();
+                boolean italic = run.isItalic();
+                UnderlinePatterns ul = run.getUnderline();
+
+                // Разбиваем текст на части
+                String[] parts = text.split("ч-1", -1);
+
+                // Удаляем исходный run
+                p.removeRun(i);
+
+                // Вставляем новые runs для всех частей
+                for (int k = 0; k < parts.length; k++) {
+                    if (!parts[k].isEmpty()) {
+                        XWPFRun r = p.insertNewRun(i++);
+                        r.setText(parts[k]);
+                        copyStyle(r, color, fontFamily, fontSize, bold, italic, ul);
+                    }
+
+                    if (k < parts.length - 1) {
+                        // Вставляем "ч" как обычный текст
+                        XWPFRun chRun = p.insertNewRun(i++);
+                        chRun.setText("ч");
+                        copyStyle(chRun, color, fontFamily, fontSize, bold, italic, ul);
+
+                        // Вставляем "−1" как верхний индекс
+                        XWPFRun supRun = p.insertNewRun(i++);
+                        supRun.setText("−1");
+                        supRun.setSubscript(VerticalAlign.SUPERSCRIPT);
+                        copyStyle(supRun, color, fontFamily, fontSize, bold, italic, ul);
+                    }
+                }
+                i--; // Корректируем индекс после вставки
+            }
+        }
+    }
+
+    // Вспомогательный метод для восстановления стиля run'а
+    private static void copyStyle(XWPFRun target,
+                                  String color, String fontFamily, int fontSize,
+                                  boolean bold, boolean italic, UnderlinePatterns ul) {
+        if (color      != null)       target.setColor(color);
+        if (fontFamily != null)       target.setFontFamily(fontFamily);
+        if (fontSize   > 0)           target.setFontSize(fontSize);
+        target.setBold(bold);
+        target.setItalic(italic);
+        target.setUnderline(ul);
     }
 
     private static String getSafeValue(String value) {
@@ -159,45 +246,6 @@ public class DocxGenerator {
                 .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0);
-    }
-
-    private static void highlightProtocolNumber(XWPFDocument doc, String protocolNumber) {
-        // Обработка основного текста
-        for (XWPFParagraph p : doc.getParagraphs()) {
-            highlightRuns(p.getRuns(), protocolNumber);
-        }
-
-        // Обработка таблиц
-        for (XWPFTable tbl : doc.getTables()) {
-            for (XWPFTableRow row : tbl.getRows()) {
-                for (XWPFTableCell cell : row.getTableCells()) {
-                    for (XWPFParagraph p : cell.getParagraphs()) {
-                        highlightRuns(p.getRuns(), protocolNumber);
-                    }
-                }
-            }
-        }
-
-        // Обработка колонтитулов
-        for (XWPFHeader header : doc.getHeaderList()) {
-            for (XWPFParagraph p : header.getParagraphs()) {
-                highlightRuns(p.getRuns(), protocolNumber);
-            }
-        }
-        for (XWPFFooter footer : doc.getFooterList()) {
-            for (XWPFParagraph p : footer.getParagraphs()) {
-                highlightRuns(p.getRuns(), protocolNumber);
-            }
-        }
-    }
-
-    private static void highlightRuns(List<XWPFRun> runs, String text) {
-        for (XWPFRun run : runs) {
-            String runText = run.getText(0);
-            if (runText != null && runText.equals(text)) {
-                run.setTextHighlightColor("yellow");
-            }
-        }
     }
 
     private static File saveDocument(XWPFDocument doc) throws IOException {
@@ -348,26 +396,26 @@ public class DocxGenerator {
         }
     }
 
-    private static void applySpecialFormatting(XWPFRun run, String text) {
-        // Настройки для специальных символов
-        if (text.contains("inf")) {
-            // Подстрочный текст
-            run.setSubscript(VerticalAlign.SUBSCRIPT);
-        }
-
-        if (text.contains("des") || text.contains("reg")) {
-            // Надстрочный текст
-            run.setSubscript(VerticalAlign.SUPERSCRIPT);
-        }
-
-        if (text.contains("ч") && text.contains("-1")) {
-            // Надстрочный текст для ч⁻¹
-            run.setText(text.replace("-1", ""));
-            XWPFRun superscript = run.getParagraph().createRun();
-            superscript.setSubscript(VerticalAlign.SUPERSCRIPT);
-            superscript.setText("−1"); // Используем длинное тире
-        }
-    }
+//    private static void applySpecialFormatting(XWPFRun run, String text) {
+//        // Настройки для специальных символов
+//        if (text.contains("inf")) {
+//            // Подстрочный текст
+//            run.setSubscript(VerticalAlign.SUBSCRIPT);
+//        }
+//
+//        if (text.contains("des") || text.contains("reg")) {
+//            // Надстрочный текст
+//            run.setSubscript(VerticalAlign.SUPERSCRIPT);
+//        }
+//
+//        if (text.contains("ч") && text.contains("-1")) {
+//            // Надстрочный текст для ч⁻¹
+//            run.setText(text.replace("-1", ""));
+//            XWPFRun superscript = run.getParagraph().createRun();
+//            superscript.setSubscript(VerticalAlign.SUPERSCRIPT);
+//            superscript.setText("−1"); // Используем длинное тире
+//        }
+//    }
 
     private static void replaceAnchoredTableCells(XWPFDocument doc, List<RoomData> rooms) {
         // rooms.get(0) → первая комната → таблица index=1, rooms.get(1)→таблица index=2 и т.д.

@@ -31,6 +31,9 @@ public class MainModel {
     private final StringProperty ventilationTypeProperty = new SimpleStringProperty("");
     private final IntegerProperty airExchangeNormProperty = new SimpleIntegerProperty(4);
     private final StringProperty buildingClassProperty = new SimpleStringProperty();
+    private Double pressure;
+    private Double windSpeed;
+    private Double temperature;
 
 
     public MainModel() {
@@ -176,72 +179,29 @@ public class MainModel {
         return buildingType.get();
     }
 
-
-    public void setBuildingType(String buildingType) {
-        this.buildingType.set(buildingType);
-    }
-
-    public String getWallTypeProperty() {
-        return wallTypeProperty.get();
-    }
-
-    public StringProperty wallTypePropertyProperty() {
-        return wallTypeProperty;
-    }
-
-    public void setWallTypeProperty(String wallTypeProperty) {
-        this.wallTypeProperty.set(wallTypeProperty);
-    }
-
-    public String getWindowTypeProperty() {
-        return windowTypeProperty.get();
-    }
-
-    public StringProperty windowTypePropertyProperty() {
-        return windowTypeProperty;
-    }
-
-    public void setWindowTypeProperty(String windowTypeProperty) {
-        this.windowTypeProperty.set(windowTypeProperty);
-    }
-
-    public String getVentilationTypeProperty() {
-        return ventilationTypeProperty.get();
-    }
-
-    public StringProperty ventilationTypePropertyProperty() {
-        return ventilationTypeProperty;
-    }
-
-    public void setVentilationTypeProperty(String ventilationTypeProperty) {
-        this.ventilationTypeProperty.set(ventilationTypeProperty);
-    }
-
-    public int getAirExchangeNormProperty() {
-        return airExchangeNormProperty.get();
-    }
-
-    public IntegerProperty airExchangeNormPropertyProperty() {
-        return airExchangeNormProperty;
-    }
-
-    public void setAirExchangeNormProperty(int airExchangeNormProperty) {
-        this.airExchangeNormProperty.set(airExchangeNormProperty);
-    }
-
-    public String getBuildingClassProperty() {
-        return buildingClassProperty.get();
-    }
-
-    public StringProperty buildingClassPropertyProperty() {
-        return buildingClassProperty;
-    }
-
-    public void setBuildingClassProperty(String buildingClassProperty) {
-        this.buildingClassProperty.set(buildingClassProperty);
-    }
-
     public String getBuildingClass() {
         return buildingClassProperty.get();
+    }
+    public Double getPressure() {
+        return pressure;
+    }
+    public void setPressure(Double pressure) {
+        this.pressure = pressure;
+    }
+
+    public Double getWindSpeed() {
+        return windSpeed;
+    }
+
+    public void setWindSpeed(Double windSpeed) {
+        this.windSpeed = windSpeed;
+    }
+
+    public Double getTemperature() {
+        return temperature;
+    }
+
+    public void setTemperature(Double temperature) {
+        this.temperature = temperature;
     }
 }
