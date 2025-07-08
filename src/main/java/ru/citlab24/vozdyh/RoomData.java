@@ -18,7 +18,7 @@ public class RoomData {
     private final DoubleProperty windowArea = new SimpleDoubleProperty(0);
     private final List<Double> qValues = new ArrayList<>();
     private StringProperty floor = new SimpleStringProperty("");
-
+    private final StringProperty apartmentType = new SimpleStringProperty("");
     public String getName() {
         return name.get();
     }
@@ -44,7 +44,18 @@ public class RoomData {
     public double getWindowArea() {
         return windowArea.get();
     }
+    public String getFullName() {
+        String type = getApartmentType();
+        String base = getName();
 
+        if (type == null || type.isEmpty())
+            return base;
+
+        return type + " " + base;
+    }
+    public String getApartmentType() { return apartmentType.get(); }
+    public void setApartmentType(String value) { apartmentType.set(value); }
+    public StringProperty apartmentTypeProperty() { return apartmentType; }
     public DoubleProperty windowAreaProperty() {
         return windowArea;
     }

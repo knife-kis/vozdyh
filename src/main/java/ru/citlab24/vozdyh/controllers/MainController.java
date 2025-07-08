@@ -51,6 +51,8 @@ public class MainController {
 
         // Инициализация выбора
         ventilationTypeChoiceBox.getItems().addAll("естественная", "искусственная");
+        ventilationTypeChoiceBox.valueProperty()
+                .bindBidirectional(model.ventilationTypeProperty());
         buildingTypeChoiceBox.getItems().addAll("Жилое", "Общественное");
 
         // Установка значений по умолчанию

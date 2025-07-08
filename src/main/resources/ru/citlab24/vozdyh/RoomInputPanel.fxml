@@ -5,6 +5,8 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.control.ToggleButton?>
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="ru.citlab24.vozdyh.RoomInputPanel"
@@ -16,9 +18,15 @@
             <ColumnConstraints percentWidth="60"/>
         </columnConstraints>
 
-        <Label text="Наименование:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label text="Тип квартиры:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <HBox alignment="CENTER_LEFT" spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <ToggleButton fx:id="cornerButton" mnemonicParsing="false" text="У" />
+            <ToggleButton fx:id="rowButton" mnemonicParsing="false" text="Р" />
+            <ToggleButton fx:id="endButton" mnemonicParsing="false" text="Т" />
+        </HBox>
+        <Label text="Наименование:" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
         <TextField fx:id="nameField" promptText="Например: угловая квартира №2-1"
-                   GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                   GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.columnSpan="2"/>
 
         <Label text="Этаж:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <TextField fx:id="floorField" promptText="Введите этаж"

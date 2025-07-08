@@ -99,7 +99,7 @@ public class DocxGenerator {
 
     private static void replaceRoomData(XWPFDocument doc, RoomData room, int roomIndex) {
         // Основные параметры
-        replaceAllText(doc, "[Room" + roomIndex + ".Name]", getSafeValue(room.getName()));
+        replaceAllText(doc, "[Room" + roomIndex + ".Name]", getSafeValue(room.getFullName()));
         replaceAllText(doc, "[Room" + roomIndex + ".Floor]", getSafeValue(room.getFloor()));
         replaceAllText(doc, "[Room" + roomIndex + ".Area]", formatDouble(room.getArea()));
         replaceAllText(doc, "[Room" + roomIndex + ".Height]", formatDouble(room.getHeight()));
@@ -114,7 +114,7 @@ public class DocxGenerator {
         replaceAllText(doc, "[Room" + roomIndex + ".N50]", formatDouble(room.getN50()));
 
         // Дополнительные замены
-        replaceAllText(doc, "[угловая/рядовая/торцевая квартира №]", getSafeValue(room.getName()));
+        replaceAllText(doc, "[угловая/рядовая/торцевая квартира №]", getSafeValue(room.getFullName()));
         replaceAllText(doc, "[номер этажа]", getSafeValue(room.getFloor()));
         replaceAllText(doc, "[пло-щадь внешней стены]", formatDouble(room.getArea()));
         replaceAllText(doc, "[площадь окон]", formatDouble(room.getWindowArea()));
