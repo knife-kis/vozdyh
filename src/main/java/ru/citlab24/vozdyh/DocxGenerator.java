@@ -17,7 +17,6 @@ public class DocxGenerator {
         String rawProtocol = model.getProtocolNumber();
         boolean useDefaultProtocol = rawProtocol == null || rawProtocol.isBlank();
         String protocolNumber = useDefaultProtocol ? "10" : rawProtocol;
-
         File templateFile = new File(templatePath);
         if (!templateFile.exists()) {
             throw new FileNotFoundException("Файл шаблона не найден: " + templatePath);
@@ -73,8 +72,10 @@ public class DocxGenerator {
         replaceAllText(doc, "[вид стен и их толщина]", getSafeValue(model.getWallType()));
         replaceAllText(doc, "[вид оконных блоков]", getSafeValue(model.getWindowType()));
         replaceAllText(doc, "[естественная/искусственная]", getSafeValue(model.getVentilationType()));
+        replaceAllText(doc, "[Класс]", getSafeValue(model.getBuildingClass()));
         replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
                 String.valueOf(model.getAirExchangeNorm()));
+//        replaceAllText(doc, "[Класс]", model.getBuildingType());
     }
 
     private static String getSafeValue(String value) {

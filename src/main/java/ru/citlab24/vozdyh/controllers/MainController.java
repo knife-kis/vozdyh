@@ -56,6 +56,7 @@ public class MainController {
         // Установка значений по умолчанию
         buildingTypeChoiceBox.setValue("Жилое");
         ventilationTypeChoiceBox.setValue("естественная");
+        model.updateBuildingClass();
 
         setupAutoExpandingTextArea(wallTypeField);
         setupAutoExpandingTextArea(windowTypeField);
