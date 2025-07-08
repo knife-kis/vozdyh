@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -39,6 +40,9 @@ public class DocxGenerator {
             // Обработка комнат
             processRooms(doc, model);
 
+            // +++ ДОБАВЛЕНО: Расчет статистик +++
+            calculateAndReplaceSummary(doc, model);
+
             // Подсветка номера протокола при необходимости
             if (useDefaultProtocol) {
                 highlightProtocolNumber(doc, protocolNumber);
@@ -48,6 +52,30 @@ public class DocxGenerator {
             return saveDocument(doc);
         }
     }
+
+    private static void calculateAndReplaceSummary(XWPFDocument doc, MainModel model) {
+        List<RoomData> rooms = model.getRooms();
+        if (rooms.isEmpty()) return;
+
+        // Собираем значения n50 и M (расчетную величину)
+        List<Double> n50Values = new ArrayList<>();
+
+        for (RoomData room : rooms) {
+            n50Values.add(room.getN50());
+        }
+
+        // Рассчитываем статистики
+        double minN = Collections.min(n50Values);
+        double maxN = Collections.max(n50Values);
+        double avgN = n50Values.stream().mapToDouble(d -> d).average().orElse(0);
+
+
+        // Заменяем плейсхолдеры
+        replaceAllText(doc, "[minN]", formatDouble(minN));
+        replaceAllText(doc, "[maxN]", formatDouble(maxN));
+        replaceAllText(doc, "[avgN]", formatDouble(avgN));
+    }
+
     private static void replaceCommonPlaceholders(XWPFDocument doc, MainModel model,
                                                   String protocolNumber, int year,
                                                   String nextDayStr, String currentMonth,
