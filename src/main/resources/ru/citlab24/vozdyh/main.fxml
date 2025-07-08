@@ -15,21 +15,22 @@
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="ru.citlab24.vozdyh.controllers.MainController">
 
     <center>
-        <TabPane fx:id="tabPane" prefWidth="800" prefHeight="600">
+        <TabPane fx:id="tabPane" prefWidth="1200" prefHeight="600">
             <!-- Общие данные -->
             <Tab fx:id="generalTab" text="Общие данные">
-                <GridPane hgap="10" vgap="10">
+                <GridPane hgap="5" vgap="5">
                     <padding>
-                        <Insets top="20" right="20" bottom="20" left="20"/>
+                        <Insets top="10" right="1" bottom="10" left="10"/>
                     </padding>
                     <columnConstraints>
-                        <ColumnConstraints percentWidth="30"/>
-                        <ColumnConstraints percentWidth="70"/>
+                        <ColumnConstraints percentWidth="15"/>
+                        <ColumnConstraints percentWidth="85"/>
                     </columnConstraints>
 
                     <Label text="№ протокола:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
@@ -56,10 +57,21 @@
                                GridPane.rowIndex="4" GridPane.columnIndex="1"/>
 
                     <Label text="Вид стен и толщина:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-                    <TextField fx:id="wallTypeField" promptText="Вид и толщина стен" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                    <TextArea fx:id="wallTypeField"
+                              wrapText="true"
+                              prefRowCount="1"
+                              maxHeight="-Infinity"
+
+                              style="-fx-padding: 2px; -fx-font-size: 12px;" promptText="Вид и толщина стен" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
 
                     <Label text="Вид оконных блоков:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-                    <TextField fx:id="windowTypeField" promptText="Вид окон" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+                    <TextArea fx:id="windowTypeField" wrapText="true"
+                              prefRowCount="1"
+                              maxHeight="-Infinity"
+                              style="-fx-padding: 2px; -fx-font-size: 12px;"
+                              promptText="Вид окон"
+                              GridPane.rowIndex="6"
+                              GridPane.columnIndex="1"/>
 
                     <Label text="Тип вентиляции:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
                     <ChoiceBox fx:id="ventilationTypeChoiceBox" GridPane.rowIndex="7" GridPane.columnIndex="1"/>

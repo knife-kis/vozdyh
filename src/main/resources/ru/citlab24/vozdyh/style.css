@@ -1,0 +1,9 @@
+.text-area {
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-border-color: #ccc;
+}
+
+.text-area:focused {
+    -fx-border-color: #4d90fe;
+}

@@ -3,6 +3,7 @@ package ru.citlab24.vozdyh.controllers;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.converter.NumberStringConverter;
 import ru.citlab24.vozdyh.DocxGenerator;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class MainController {
     @FXML private VBox roomsContainer;
@@ -24,8 +26,8 @@ public class MainController {
     @FXML private TextField customerAddressField;
     @FXML private TextField objectNameField;
     @FXML private ChoiceBox<String> buildingTypeChoiceBox;
-    @FXML private TextField wallTypeField;
-    @FXML private TextField windowTypeField;
+    @FXML private TextArea wallTypeField;
+    @FXML private TextArea windowTypeField;
     @FXML private ChoiceBox<String> ventilationTypeChoiceBox;
     @FXML
     private TextField roomCountField;
@@ -46,21 +48,96 @@ public class MainController {
         customerAddressField.textProperty().bindBidirectional(model.customerAddressProperty());
         wallTypeField.textProperty().bindBidirectional(model.wallTypeProperty());
         windowTypeField.textProperty().bindBidirectional(model.windowTypeProperty());
+
+        // Инициализация выбора
         ventilationTypeChoiceBox.getItems().addAll("естественная", "искусственная");
-        ventilationTypeChoiceBox.valueProperty().bindBidirectional(model.ventilationTypeProperty());
         buildingTypeChoiceBox.getItems().addAll("Жилое", "Общественное");
+
+        // Установка значений по умолчанию
+        buildingTypeChoiceBox.setValue("Жилое");
+        ventilationTypeChoiceBox.setValue("естественная");
+
+        setupAutoExpandingTextArea(wallTypeField);
+        setupAutoExpandingTextArea(windowTypeField);
 
         // Настройка обработчика для кнопки
         applyRoomCountButton.setOnAction(event -> handleRoomCountApply());
 
-        // Установка значения по умолчанию
+        // Установка значения по умолчанию для количества комнат
         roomCountField.setText("3");
 
+        // Слушатель для автоматического изменения типа вентиляции
+        buildingTypeChoiceBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null) return;
+
+            // Проверка, нужно ли подтверждение
+            boolean needConfirmation = false;
+            String currentVentilation = ventilationTypeChoiceBox.getValue();
+
+            if (currentVentilation != null && !currentVentilation.isEmpty()) {
+                // Проверяем, соответствует ли текущая вентиляция автоматической для старого типа здания
+                boolean wasAutoMatch = isAutoVentilationMatch(oldVal, currentVentilation);
+
+                // Проверяем, будет ли новое значение отличаться от автоматического
+                String autoVentilation = "Жилое".equals(newVal) ? "естественная" : "искусственная";
+                boolean willBeDifferent = !autoVentilation.equals(currentVentilation);
+
+                needConfirmation = !wasAutoMatch && willBeDifferent;
+            }
+
+            if (needConfirmation) {
+                Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                confirm.setTitle("Подтверждение изменения");
+                confirm.setHeaderText("Изменение типа вентиляции");
+                confirm.setContentText("При смене типа здания тип вентиляции будет изменен автоматически. Продолжить?");
+
+                Optional<ButtonType> result = confirm.showAndWait();
+                if (result.isPresent() && result.get() != ButtonType.OK) {
+                    // Отмена изменения - восстанавливаем предыдущее значение
+                    buildingTypeChoiceBox.setValue(oldVal);
+                    return;
+                }
+            }
+
+            // Установка соответствующего типа вентиляции
+            if ("Жилое".equals(newVal)) {
+                ventilationTypeChoiceBox.setValue("естественная");
+            } else if ("Общественное".equals(newVal)) {
+                ventilationTypeChoiceBox.setValue("искусственная");
+            }
+        });
         // Отложенная инициализация комнат
         Platform.runLater(() -> {
             initializeRooms(3);
         });
+    }
+    private boolean isAutoVentilationMatch(String buildingType, String ventilationType) {
+        return ("Жилое".equals(buildingType) && "естественная".equals(ventilationType)) ||
+                ("Общественное".equals(buildingType) && "искусственная".equals(ventilationType));
+    }
+    private void setupAutoExpandingTextArea(TextArea textArea) {
+        // Высота одной строки (эмпирически подобранное значение)
+        final double lineHeight = 25;
 
+        // Начальная высота для 2 строк
+        final double initialHeight = 2 * lineHeight;
+
+        textArea.setPrefHeight(initialHeight);
+        textArea.setMinHeight(initialHeight);
+        textArea.setMaxHeight(Region.USE_PREF_SIZE);
+
+        textArea.textProperty().addListener((obs, oldVal, newVal) -> {
+            // Считаем количество видимых строк
+            int visibleLines = (int) Math.ceil(textArea.getHeight() / lineHeight);
+            int actualLines = newVal.split("\n").length + 1;
+
+            // Определяем необходимое количество строк
+            int neededLines = Math.max(2, Math.min(Math.max(visibleLines, actualLines), 5));
+
+            // Устанавливаем новую высоту
+            double newHeight = neededLines * lineHeight;
+            textArea.setPrefHeight(newHeight);
+        });
     }
     @FXML
     private void handleRoomCountApply() {
