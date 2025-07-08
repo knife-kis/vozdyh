@@ -23,6 +23,8 @@ public class DocxGenerator {
             throw new FileNotFoundException("Файл шаблона не найден: " + templatePath);
         }
         model.setPressure(weather.getPressure());
+        model.setWindSpeed(weather.getWindSpeed());
+        model.setTemperature(weather.getTemperature());
 
         try (XWPFDocument doc = new XWPFDocument(new FileInputStream(templatePath))) {
             LocalDate date = model.getTestDate();
@@ -101,8 +103,8 @@ public class DocxGenerator {
                 String.valueOf(model.getAirExchangeNorm()));
         replaceCheMinusOneWithSuperscript(doc);
         replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
-//        replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()));
-//        replaceAllText(doc, "[температура]", formatDouble(model.getTemperature()));;
+        replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()) + " м/с");
+        replaceAllText(doc, "[температура улица]", formatDouble(model.getTemperature()) + " °C");
     }
 
     private static void replaceCheMinusOneWithSuperscript(XWPFDocument doc) {

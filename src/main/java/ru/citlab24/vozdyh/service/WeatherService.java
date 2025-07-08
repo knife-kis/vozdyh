@@ -27,11 +27,14 @@ public class WeatherService {
                 JSONObject json = new JSONObject(response.toString());
                 JSONObject current = json.getJSONObject("current");
 
-                double pressureKpa = current.getDouble("pressure_msl")/10; // Уже в кПа
-                double windSpeed = current.getDouble("wind_speed_10m"); // м/с
-                double temperature = current.getDouble("temperature_2m"); // °C
+                double pressureKpa = current.getDouble("pressure_msl")/10;
+                // Конвертация км/ч → м/с
+                double windSpeedKph = current.getDouble("wind_speed_10m");
+                double windSpeedMps = windSpeedKph / 3.6;
+                // Округление температуры до целого
+                double temperature = Math.round(current.getDouble("temperature_2m"));
 
-                return new WeatherData(pressureKpa, windSpeed, temperature);
+                return new WeatherData(pressureKpa, windSpeedMps, temperature);
             }
         } catch (Exception e) {
             return new WeatherData(101.3, 0.0, 20.0); // Значения по умолчанию
