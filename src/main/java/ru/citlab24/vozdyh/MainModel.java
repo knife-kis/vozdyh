@@ -31,6 +31,7 @@ public class MainModel {
     private final StringProperty ventilationTypeProperty = new SimpleStringProperty("");
     private final IntegerProperty airExchangeNormProperty = new SimpleIntegerProperty(4);
     private final StringProperty buildingClassProperty = new SimpleStringProperty();
+    private StringProperty timeOfDay = new SimpleStringProperty("утро");
     private Double pressure;
     private Double windSpeed;
     private Double temperature;
@@ -97,6 +98,7 @@ public class MainModel {
             room.setN50(q50Avg / volume);
         }
     }
+
 
     public ObservableList<RoomData> getRooms() {
         return rooms;
@@ -203,5 +205,17 @@ public class MainModel {
 
     public void setTemperature(Double temperature) {
         this.temperature = temperature;
+    }
+
+    public String getTimeOfDay() {
+        return timeOfDay.get();
+    }
+
+    public StringProperty timeOfDayProperty() {
+        return timeOfDay;
+    }
+
+    public void setTimeOfDay(String timeOfDay) {
+        this.timeOfDay.set(timeOfDay);
     }
 }

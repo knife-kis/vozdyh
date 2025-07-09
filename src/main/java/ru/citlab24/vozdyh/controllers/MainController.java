@@ -33,6 +33,8 @@ public class MainController {
     private TextField roomCountField;
     @FXML
     private Button applyRoomCountButton;
+    @FXML
+    private ChoiceBox<String> timeOfDayChoiceBox;
 
     private final MainModel model = new MainModel();
     private List<RoomInputPanel> roomPanels = new ArrayList<>();
@@ -108,6 +110,9 @@ public class MainController {
             } else if ("Общественное".equals(newVal)) {
                 ventilationTypeChoiceBox.setValue("искусственная");
             }
+            timeOfDayChoiceBox.getItems().addAll("утро", "вечер");
+            timeOfDayChoiceBox.setValue("утро");
+            timeOfDayChoiceBox.valueProperty().bindBidirectional(model.timeOfDayProperty());
         });
         // Отложенная инициализация комнат
         Platform.runLater(() -> {
@@ -189,6 +194,7 @@ public class MainController {
     @FXML
     private void handleSave() {
         try {
+            model.setTimeOfDay(timeOfDayChoiceBox.getValue());
             URL templateUrl = getClass().getResource("/ru/citlab24/vozdyh/Шаблон.docx");
             if (templateUrl == null) {
                 throw new RuntimeException("Файл шаблона не найден в ресурсах!");
@@ -210,5 +216,14 @@ public class MainController {
             error.showAndWait();
             e.printStackTrace();
         }
+    }
+    private MainModel createModelFromInput() {
+        MainModel model = new MainModel();
+        // ... существующие привязки ...
+
+        // Привязка выбора времени дня
+        model.setTimeOfDay(timeOfDayChoiceBox.getValue());
+
+        return model;
     }
 }

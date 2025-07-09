@@ -2,12 +2,11 @@ package ru.citlab24.vozdyh;
 
 import java.io.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+
 import org.apache.poi.xwpf.usermodel.VerticalAlign;
 import org.apache.poi.xwpf.usermodel.*;
 import ru.citlab24.vozdyh.service.WeatherService;
@@ -22,6 +21,7 @@ public class DocxGenerator {
         if (!templateFile.exists()) {
             throw new FileNotFoundException("Файл шаблона не найден: " + templatePath);
         }
+        String[] timeIntervals = generateTimeIntervals(model.getTimeOfDay());
         model.setPressure(weather.getPressure());
         model.setWindSpeed(weather.getWindSpeed());
         model.setTemperature(weather.getTemperature());
@@ -45,10 +45,63 @@ public class DocxGenerator {
 
             // +++ ДОБАВЛЕНО: Расчет статистик +++
             calculateAndReplaceSummary(doc, model);
+            replaceTimePlaceholders(doc, timeIntervals);
 
             // Генерация уникального имени файла
             return saveDocument(doc);
+
         }
+    }
+    private static String[] generateTimeIntervals(String timeOfDay) {
+        String[] intervals = new String[6];
+        Random random = new Random();
+
+        // Базовое время в зависимости от выбора
+        int baseHour;
+        if ("вечер".equalsIgnoreCase(timeOfDay)) {
+            baseHour = 14; // Для вечера начинаем в 14 часов
+        } else {
+            baseHour = 9; // Для утра - в 9 часов
+        }
+
+        // Случайные минуты: 0, 5 или 10
+        int baseMinute = random.nextInt(3) * 5;
+
+        // Первое измерение
+        LocalTime start1 = LocalTime.of(baseHour, baseMinute);
+        int duration1 = 40 + random.nextInt(11); // 40-50 минут
+        LocalTime end1 = start1.plusMinutes(duration1);
+
+        // Второе измерение
+        int gap1 = 10 + random.nextInt(11); // 10-20 минут
+        LocalTime start2 = end1.plusMinutes(gap1);
+        int duration2 = 40 + random.nextInt(11); // 40-50 минут
+        LocalTime end2 = start2.plusMinutes(duration2);
+
+        // Третье измерение
+        int gap2 = 10 + random.nextInt(11); // 10-20 минут
+        LocalTime start3 = end2.plusMinutes(gap2);
+        int duration3 = 40 + random.nextInt(11); // 40-50 минут
+        LocalTime end3 = start3.plusMinutes(duration3);
+
+        // Форматирование в строки HH:mm
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        intervals[0] = start1.format(formatter);
+        intervals[1] = end1.format(formatter);
+        intervals[2] = start2.format(formatter);
+        intervals[3] = end2.format(formatter);
+        intervals[4] = start3.format(formatter);
+        intervals[5] = end3.format(formatter);
+
+        return intervals;
+    }
+    private static void replaceTimePlaceholders(XWPFDocument doc, String[] intervals) {
+        replaceAllText(doc, "[время утро/вечер начало 1]", intervals[0]);
+        replaceAllText(doc, "[время утро/вечер конец 1]", intervals[1]);
+        replaceAllText(doc, "[время утро/вечер начало 2]", intervals[2]);
+        replaceAllText(doc, "[время утро/вечер конец 2]", intervals[3]);
+        replaceAllText(doc, "[время утро/вечер начало 3]", intervals[4]);
+        replaceAllText(doc, "[время утро/вечер конец 3]", intervals[5]);
     }
 
     private static void calculateAndReplaceSummary(XWPFDocument doc, MainModel model) {
