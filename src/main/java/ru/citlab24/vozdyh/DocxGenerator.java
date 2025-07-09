@@ -157,7 +157,7 @@ public class DocxGenerator {
         replaceCheMinusOneWithSuperscript(doc);
         replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
         replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()) + " м/с");
-        replaceAllText(doc, "[температура улица]", formatDouble(model.getTemperature()) + " °C");
+        replaceAllText(doc, "[температура улица]", "+ " + formatDouble(model.getTemperature()));
     }
 
     private static void replaceCheMinusOneWithSuperscript(XWPFDocument doc) {
@@ -262,9 +262,6 @@ public class DocxGenerator {
             // Основные параметры комнаты
             replaceRoomData(doc, room, roomIndex);
         }
-
-        // Обработка табличных данных (один раз для всех комнат)
-        replaceAnchoredTableCells(doc, rooms);
     }
 
     private static void replaceRoomData(XWPFDocument doc, RoomData room, int roomIndex) {
@@ -288,6 +285,18 @@ public class DocxGenerator {
         replaceAllText(doc, "[номер этажа]", getSafeValue(room.getFloor()));
         replaceAllText(doc, "[пло-щадь внешней стены]", formatDouble(room.getArea()));
         replaceAllText(doc, "[площадь окон]", formatDouble(room.getWindowArea()));
+
+        // Для каждой комнаты заменяем только один плейсхолдер
+        if (roomIndex == 1) {
+            replaceAllText(doc, "[площадь стен1]", formatDouble(room.getWallArea()));
+        } else if (roomIndex == 2) {
+            replaceAllText(doc, "[площадь стен2]", formatDouble(room.getWallArea()));
+        } else if (roomIndex == 3) {
+            replaceAllText(doc, "[площадь стен3]", formatDouble(room.getWallArea()));
+        }
+
+        // Также заменяем специфичные плейсхолдеры для каждой комнаты
+        replaceAllText(doc, "[Room" + roomIndex + ".WallArea]", formatDouble(room.getWallArea()));
     }
 
     private static String formatDouble(double value) {
@@ -450,27 +459,6 @@ public class DocxGenerator {
             }
         }
     }
-
-//    private static void applySpecialFormatting(XWPFRun run, String text) {
-//        // Настройки для специальных символов
-//        if (text.contains("inf")) {
-//            // Подстрочный текст
-//            run.setSubscript(VerticalAlign.SUBSCRIPT);
-//        }
-//
-//        if (text.contains("des") || text.contains("reg")) {
-//            // Надстрочный текст
-//            run.setSubscript(VerticalAlign.SUPERSCRIPT);
-//        }
-//
-//        if (text.contains("ч") && text.contains("-1")) {
-//            // Надстрочный текст для ч⁻¹
-//            run.setText(text.replace("-1", ""));
-//            XWPFRun superscript = run.getParagraph().createRun();
-//            superscript.setSubscript(VerticalAlign.SUPERSCRIPT);
-//            superscript.setText("−1"); // Используем длинное тире
-//        }
-//    }
 
     private static void replaceAnchoredTableCells(XWPFDocument doc, List<RoomData> rooms) {
         // rooms.get(0) → первая комната → таблица index=1, rooms.get(1)→таблица index=2 и т.д.

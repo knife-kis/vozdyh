@@ -47,43 +47,43 @@
 
                 <Label text="Заказчик:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                 <TextField fx:id="customerField"
-                           promptText="ФИО или название"
+                           promptText="ООО Ромашка"
                            GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-                <Label text="Объект:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                <TextField fx:id="objectNameField"
-                           promptText="Описание объекта"
+                <Label text="Адрес заказчика:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                <TextField fx:id="customerAddressField"
+                           promptText="Юридический адрес"
                            GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-                <Label text="Тип здания:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-                <ChoiceBox fx:id="buildingTypeChoiceBox"
+                <Label text="Объект:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                <TextField fx:id="objectNameField"
+                           promptText="Жилой дом №1"
                            GridPane.rowIndex="4" GridPane.columnIndex="1"/>
 
-                <Label text="Вид стен и толщина:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                <Label text="Тип здания:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                <ChoiceBox fx:id="buildingTypeChoiceBox"
+                           GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+                <Label text="Вид стен и толщина:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
                 <TextArea fx:id="wallTypeField"
                           wrapText="true"
                           prefRowCount="1"
                           maxHeight="-Infinity"
                           style="-fx-padding: 2px; -fx-font-size: 12px;"
                           promptText="Вид и толщина стен"
-                          GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                          GridPane.rowIndex="6" GridPane.columnIndex="1"/>
 
-                <Label text="Вид оконных блоков:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                <Label text="Вид оконных блоков:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
                 <TextArea fx:id="windowTypeField" wrapText="true"
                           prefRowCount="1"
                           maxHeight="-Infinity"
                           style="-fx-padding: 2px; -fx-font-size: 12px;"
                           promptText="Вид окон"
-                          GridPane.rowIndex="6"
+                          GridPane.rowIndex="7"
                           GridPane.columnIndex="1"/>
 
-                <Label text="Тип вентиляции:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
-                <ChoiceBox fx:id="ventilationTypeChoiceBox" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
-
-                <Label text="Адрес заказчика:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-                <TextField fx:id="customerAddressField"
-                           promptText="Юридический адрес"
-                           GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+                <Label text="Тип вентиляции:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+                <ChoiceBox fx:id="ventilationTypeChoiceBox" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
 
                 <!-- ДОБАВЛЕНО: Выбор времени дня -->
                 <Label text="Время дня:" GridPane.rowIndex="9" GridPane.columnIndex="0"/>

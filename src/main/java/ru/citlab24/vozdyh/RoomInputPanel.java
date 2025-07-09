@@ -24,7 +24,7 @@ public class RoomInputPanel extends GridPane {
     private final ToggleButton rowButton    = new ToggleButton("Рядовая");
     private final ToggleButton endButton    = new ToggleButton("Торцевая");
     private final ToggleGroup apartmentTypeGroup = new ToggleGroup();
-
+    private final TextField wallAreaField = new TextField();
     @FXML
     public void initialize() {
         // Инициализация группы переключателей
@@ -71,7 +71,12 @@ public class RoomInputPanel extends GridPane {
         setVgap(10);
         setPadding(new Insets(15));
         setStyle("-fx-border-color: #ccc; -fx-border-width: 1; -fx-border-radius: 5;");
+        windowAreaField.textProperty().bindBidirectional(
+                room.windowAreaProperty(),
+                new NumberStringConverter()
+        );
 
+        room.windowAreaProperty().addListener((o, ov, nv) -> updateResults());
         // Заголовок
         add(new Label("Помещение №" + index), 0, 0, 2, 1);
 
@@ -97,29 +102,35 @@ public class RoomInputPanel extends GridPane {
                 room.areaProperty(), new NumberStringConverter()
         );
 
-        // Площадь окон
-        add(new Label("Площадь окон (м²):"), 0, 6);
-        add(windowAreaField, 1, 6);
-        windowAreaField.textProperty().bindBidirectional(
-                room.windowAreaProperty(), new NumberStringConverter()
-        );
-
         // Высота
         add(new Label("Высота (м):"), 0, 5);
         add(heightField, 1, 5);
         heightField.textProperty().bindBidirectional(
                 room.heightProperty(), new NumberStringConverter()
         );
+        // +++ Поля для стен
+        add(new Label("Площадь стен (м²):"), 0, 6);
+        add(wallAreaField, 1, 6);
+        wallAreaField.textProperty().bindBidirectional(
+                room.wallAreaProperty(),
+                new NumberStringConverter()
+        );
 
+        // Обновляем расчеты при изменении
+        room.wallAreaProperty().addListener((o, ov, nv) -> updateResults());
 
+        add(new Label("Площадь окон (м²):"), 0, 7);
+        add(windowAreaField, 1, 7);
 
         // Результаты (сдвинуты на 1 строку вниз)
-        add(new Label("Объем:"), 0, 7); // Было 6
-        add(volumeLabel, 1, 7);         // Было 6
-        add(new Label("Коэффициент:"), 0, 8); // Было 7
-        add(coefficientLabel, 1, 8);         // Было 7
-        add(new Label("n50:"), 0, 9);    // Было 8
-        add(n50Label, 1, 9);             // Было 8
+        add(new Label("Объем:"), 0, 8);
+        add(volumeLabel, 1, 8);
+        add(new Label("Коэффициент:"), 0, 9);
+        add(coefficientLabel, 1, 9);
+        add(new Label("n50:"), 0, 10);
+        add(n50Label, 1, 10);
+
+
 
         // Пересчет при изменении
         room.heightProperty().addListener((o, ov, nv) -> updateResults());

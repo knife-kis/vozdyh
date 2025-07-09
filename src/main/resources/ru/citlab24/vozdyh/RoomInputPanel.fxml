@@ -36,16 +36,20 @@
         <TextField fx:id="areaField" promptText="Площадь помещения"
                    GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-        <Label text="Площадь окон (м²):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="windowAreaField" promptText="Площадь окон"
+        <Label text="Площадь стены (м²):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="wallArea1Field" promptText="Площадь стен "
                    GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-        <Label text="Высота (м):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="heightField" promptText="Высота потолков"
+        <Label text="Площадь окон (м²):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="windowAreaField" promptText="Площадь окон"
                    GridPane.rowIndex="4" GridPane.columnIndex="1"/>
 
-        <Label text="Объем:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <Label fx:id="volumeLabel" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+        <Label text="Высота (м):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="heightField" promptText="Высота потолков"
+                   GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+        <Label text="Объем:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+        <Label fx:id="volumeLabel" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
 
     </GridPane>
 </VBox>

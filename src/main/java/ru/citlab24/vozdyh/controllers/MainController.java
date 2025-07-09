@@ -217,13 +217,13 @@ public class MainController {
             e.printStackTrace();
         }
     }
-    private MainModel createModelFromInput() {
-        MainModel model = new MainModel();
-        // ... существующие привязки ...
-
-        // Привязка выбора времени дня
-        model.setTimeOfDay(timeOfDayChoiceBox.getValue());
-
-        return model;
-    }
+//    private MainModel createModelFromInput() {
+//        MainModel model = new MainModel();
+//        // ... существующие привязки ...
+//
+//        // Привязка выбора времени дня
+//        model.setTimeOfDay(timeOfDayChoiceBox.getValue());
+//
+//        return model;
+//    }
 }

@@ -19,6 +19,10 @@ public class RoomData {
     private final List<Double> qValues = new ArrayList<>();
     private StringProperty floor = new SimpleStringProperty("");
     private final StringProperty apartmentType = new SimpleStringProperty("");
+    private final DoubleProperty wallArea = new SimpleDoubleProperty();
+    private final DoubleProperty wallArea1 = new SimpleDoubleProperty();
+    private final DoubleProperty wallArea2 = new SimpleDoubleProperty();
+    private final DoubleProperty wallArea3 = new SimpleDoubleProperty();
     public String getName() {
         return name.get();
     }
@@ -139,4 +143,51 @@ public class RoomData {
         qValues.addAll(calculatedQValues);
     }
 
+    public double getWallArea1() {
+        return wallArea1.get();
+    }
+
+    public DoubleProperty wallArea1Property() {
+        return wallArea1;
+    }
+
+    public void setWallArea1(double wallArea1) {
+        this.wallArea1.set(wallArea1);
+    }
+
+    public double getWallArea2() {
+        return wallArea2.get();
+    }
+
+    public DoubleProperty wallArea2Property() {
+        return wallArea2;
+    }
+
+    public void setWallArea2(double wallArea2) {
+        this.wallArea2.set(wallArea2);
+    }
+
+    public double getWallArea3() {
+        return wallArea3.get();
+    }
+
+    public DoubleProperty wallArea3Property() {
+        return wallArea3;
+    }
+
+    public void setWallArea3(double wallArea3) {
+        this.wallArea3.set(wallArea3);
+    }
+
+    public double getWallArea() {
+        return wallArea.get();
+    }
+
+    public DoubleProperty wallAreaProperty() {
+        return wallArea;
+    }
+
+    public void setWallArea(double wallArea) {
+        this.wallArea.set(wallArea);
+    }
 }
