@@ -157,9 +157,12 @@ public class DocxGenerator {
         replaceCheMinusOneWithSuperscript(doc);
         replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
         replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()) + " м/с");
-        replaceAllText(doc, "[температура улица]", "+ " + formatDouble(model.getTemperature()));
+        replaceAllText(doc, "[температура улица]", "+" + formatTemperature(model.getTemperature()) );
     }
 
+    private static String formatTemperature(double value) {
+        return String.format("%d", (int) value);
+    }
     private static void replaceCheMinusOneWithSuperscript(XWPFDocument doc) {
         // Обработка всех элементов документа
         for (XWPFParagraph p : doc.getParagraphs()) {
@@ -254,14 +257,25 @@ public class DocxGenerator {
 
     private static void processRooms(XWPFDocument doc, MainModel model) {
         List<RoomData> rooms = model.getRooms();
+        int month = model.getTestDate().getMonthValue();
+        String buildingType = model.getBuildingType();
 
         for (int i = 0; i < rooms.size(); i++) {
             RoomData room = rooms.get(i);
             int roomIndex = i + 1;
 
+            // Генерация температуры для помещения
+            if (roomIndex <= 3) {
+                int temp = generateIndoorTemperature(buildingType, month);
+                room.setIndoorTemperature(temp); // Сохраняем температуру в комнате
+            }
+
             // Основные параметры комнаты
             replaceRoomData(doc, room, roomIndex);
         }
+
+        // Обработка табличных данных
+        replaceAnchoredTableCells(doc, rooms);
     }
 
     private static void replaceRoomData(XWPFDocument doc, RoomData room, int roomIndex) {
@@ -294,11 +308,19 @@ public class DocxGenerator {
         } else if (roomIndex == 3) {
             replaceAllText(doc, "[площадь стен3]", formatDouble(room.getWallArea()));
         }
+        if (roomIndex <= 3) {
+            // Используем форматирование со знаком "+"
+            String formattedTemp = formatTemperatureSigned(room.getIndoorTemperature());
+            replaceAllText(doc, "[температура внутри " + roomIndex + "]", formattedTemp);
+        }
 
         // Также заменяем специфичные плейсхолдеры для каждой комнаты
         replaceAllText(doc, "[Room" + roomIndex + ".WallArea]", formatDouble(room.getWallArea()));
     }
 
+    private static String formatTemperatureSigned(int temperature) {
+        return (temperature >= 0 ? "+" : "") + temperature;
+    }
     private static String formatDouble(double value) {
         return String.format("%.2f", value);
     }
@@ -505,6 +527,37 @@ public class DocxGenerator {
                     }
                 }
                 break; // таблицу нашли и заполнили — выходим
+            }
+        }
+    }
+    private static int generateIndoorTemperature(String buildingType, int month) {
+        Random random = new Random();
+
+        if ("Жилое".equals(buildingType)) {
+            switch (month) {
+                case 11: case 12: case 1: case 2: case 3: // Ноябрь-Март
+                    return random.nextBoolean() ? 20 : 21;
+                case 4: case 5: // Апрель-Май
+                    return 20 + random.nextInt(3); // 20, 21, 22
+                case 6: case 7: case 8: // Июнь-Август
+                    return random.nextBoolean() ? 22 : 23;
+                case 9: case 10: // Сентябрь-Октябрь
+                    return random.nextBoolean() ? 21 : 22;
+                default:
+                    return 22; // По умолчанию
+            }
+        } else { // Общественное здание
+            switch (month) {
+                case 11: case 12: case 1: case 2: case 3: // Ноябрь-Март
+                    return 19 + random.nextInt(3); // 19, 20, 21
+                case 4: case 5: // Апрель-Май
+                    return 20 + random.nextInt(4); // 20, 21, 22, 23
+                case 6: case 7: case 8: // Июнь-Август
+                    return 21 + random.nextInt(3); // 21, 22, 23
+                case 9: case 10: // Сентябрь-Октябрь
+                    return 19 + random.nextInt(4); // 19, 20, 21, 22
+                default:
+                    return 22; // По умолчанию
             }
         }
     }

@@ -1,9 +1,6 @@
 package ru.citlab24.vozdyh;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +20,7 @@ public class RoomData {
     private final DoubleProperty wallArea1 = new SimpleDoubleProperty();
     private final DoubleProperty wallArea2 = new SimpleDoubleProperty();
     private final DoubleProperty wallArea3 = new SimpleDoubleProperty();
+    private IntegerProperty indoorTemperature = new SimpleIntegerProperty();
     public String getName() {
         return name.get();
     }
@@ -189,5 +187,17 @@ public class RoomData {
 
     public void setWallArea(double wallArea) {
         this.wallArea.set(wallArea);
+    }
+
+    public int getIndoorTemperature() {
+        return indoorTemperature.get();
+    }
+
+    public IntegerProperty indoorTemperatureProperty() {
+        return indoorTemperature;
+    }
+
+    public void setIndoorTemperature(int indoorTemperature) {
+        this.indoorTemperature.set(indoorTemperature);
     }
 }
