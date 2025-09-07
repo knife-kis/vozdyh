@@ -47,11 +47,14 @@ public class DocxGenerator {
             calculateAndReplaceSummary(doc, model);
             replaceTimePlaceholders(doc, timeIntervals);
 
+            finalizeFormatting(doc);
             // Генерация уникального имени файла
             return saveDocument(doc);
 
         }
     }
+
+
     private static String[] generateTimeIntervals(String timeOfDay) {
         String[] intervals = new String[6];
         Random random = new Random();
@@ -154,7 +157,6 @@ public class DocxGenerator {
         replaceAllText(doc, "[Класс]", getSafeValue(model.getBuildingClass()));
         replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
                 String.valueOf(model.getAirExchangeNorm()));
-        replaceCheMinusOneWithSuperscript(doc);
         replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
         replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()) + " м/с");
         replaceAllText(doc, "[температура улица]", "+" + formatTemperature(model.getTemperature()) );
@@ -163,78 +165,21 @@ public class DocxGenerator {
     private static String formatTemperature(double value) {
         return String.format("%d", (int) value);
     }
-    private static void replaceCheMinusOneWithSuperscript(XWPFDocument doc) {
-        // Обработка всех элементов документа
-        for (XWPFParagraph p : doc.getParagraphs()) {
-            replaceInParagraphCheMinusOne(p);
-        }
 
-        // Обработка таблиц
-        for (XWPFTable tbl : doc.getTables()) {
+    // Универсальный обход параграфов в теле и таблицах
+    private static void processAllParagraphs(IBody body, java.util.function.Consumer<XWPFParagraph> fn) {
+        // Параграфы вне таблиц
+        for (XWPFParagraph p : body.getParagraphs()) {
+            fn.accept(p);
+        }
+        // Параграфы в таблицах
+        for (XWPFTable tbl : body.getTables()) {
             for (XWPFTableRow row : tbl.getRows()) {
                 for (XWPFTableCell cell : row.getTableCells()) {
                     for (XWPFParagraph p : cell.getParagraphs()) {
-                        replaceInParagraphCheMinusOne(p);
+                        fn.accept(p);
                     }
                 }
-            }
-        }
-
-        // Обработка колонтитулов
-        for (XWPFHeader header : doc.getHeaderList()) {
-            for (XWPFParagraph p : header.getParagraphs()) {
-                replaceInParagraphCheMinusOne(p);
-            }
-        }
-        for (XWPFFooter footer : doc.getFooterList()) {
-            for (XWPFParagraph p : footer.getParagraphs()) {
-                replaceInParagraphCheMinusOne(p);
-            }
-        }
-    }
-
-    private static void replaceInParagraphCheMinusOne(XWPFParagraph p) {
-        List<XWPFRun> runs = p.getRuns();
-        for (int i = 0; i < runs.size(); i++) {
-            XWPFRun run = runs.get(i);
-            String text = run.getText(0);
-            if (text != null && text.contains("ч-1")) {
-                // Сохраняем стиль
-                String color = run.getColor();
-                String fontFamily = run.getFontFamily();
-                int fontSize = run.getFontSize();
-                boolean bold = run.isBold();
-                boolean italic = run.isItalic();
-                UnderlinePatterns ul = run.getUnderline();
-
-                // Разбиваем текст на части
-                String[] parts = text.split("ч-1", -1);
-
-                // Удаляем исходный run
-                p.removeRun(i);
-
-                // Вставляем новые runs для всех частей
-                for (int k = 0; k < parts.length; k++) {
-                    if (!parts[k].isEmpty()) {
-                        XWPFRun r = p.insertNewRun(i++);
-                        r.setText(parts[k]);
-                        copyStyle(r, color, fontFamily, fontSize, bold, italic, ul);
-                    }
-
-                    if (k < parts.length - 1) {
-                        // Вставляем "ч" как обычный текст
-                        XWPFRun chRun = p.insertNewRun(i++);
-                        chRun.setText("ч");
-                        copyStyle(chRun, color, fontFamily, fontSize, bold, italic, ul);
-
-                        // Вставляем "−1" как верхний индекс
-                        XWPFRun supRun = p.insertNewRun(i++);
-                        supRun.setText("−1");
-                        supRun.setSubscript(VerticalAlign.SUPERSCRIPT);
-                        copyStyle(supRun, color, fontFamily, fontSize, bold, italic, ul);
-                    }
-                }
-                i--; // Корректируем индекс после вставки
             }
         }
     }
@@ -386,6 +331,10 @@ public class DocxGenerator {
         String fullText = p.getText();
         if (fullText == null || !fullText.contains(placeholder)) return;
 
+        if (paragraphHasDrawing(p)) {
+            replaceInParagraphNonDestructive(p, placeholder, replacement);
+            return;
+        }
         // Сохраняем все стили runs
         List<RunStyle> styles = new ArrayList<>();
         List<String> runTexts = new ArrayList<>();
@@ -431,20 +380,6 @@ public class DocxGenerator {
                 applyRunStyle(newRun, lastStyle);
             }
         }
-    }
-
-    private static void copyRunStyle(XWPFRun target, XWPFRun source) {
-        if (source == null) return;
-
-        target.setColor(source.getColor());
-        target.setFontFamily(source.getFontFamily());
-        target.setFontSize(source.getFontSize());
-        target.setBold(source.isBold());
-        target.setItalic(source.isItalic());
-        target.setUnderline(source.getUnderline());
-        // Копирование других важных свойств
-        target.setStrike(source.isStrike());
-        target.setTextPosition(source.getTextPosition());
     }
 
     private static void replaceAllText(XWPFDocument doc, String placeholder, String replacement) {
@@ -497,36 +432,8 @@ public class DocxGenerator {
                             ? String.format("%.1f", qValues.get(idx))
                             : "";
                     // простая замена текста (в параграфах и в таблицах)
-                    replaceAllText(doc, placeholder, replacement);
+                    replaceAllTextNonDestructive(doc, placeholder, replacement);
                 }
-            }
-        }
-    }
-    private static void replaceTableDataSafe(XWPFDocument doc, String tableTitle, List<Double> values) {
-        if (values == null || values.isEmpty()) return;
-
-        for (XWPFTable table : doc.getTables()) {
-            if (table.getText().contains(tableTitle)) {
-                int startRow = 1; // предположим: первая строка — заголовок таблицы (с ΔP Qm Qm Qm...)
-                int valuesIndex = 0;
-
-                for (int i = 0; i < 5; i++) { // 5 строк по ΔP (50, 40, 30, 20, 10)
-                    if ((startRow + i) >= table.getRows().size()) break;
-                    XWPFTableRow row = table.getRow(startRow + i);
-
-                    // Столбцы 1-5: Qm (0 — это ΔP, пропускаем)
-                    for (int j = 1; j <= 5; j++) {
-                        if (valuesIndex >= values.size()) break;
-                        if (j >= row.getTableCells().size()) break;
-
-                        XWPFTableCell cell = row.getCell(j);
-                        cell.removeParagraph(0);
-                        XWPFParagraph p = cell.addParagraph();
-                        XWPFRun run = p.createRun();
-                        run.setText(String.format("%.1f", values.get(valuesIndex++)));
-                    }
-                }
-                break; // таблицу нашли и заполнили — выходим
             }
         }
     }
@@ -558,6 +465,268 @@ public class DocxGenerator {
                     return 19 + random.nextInt(4); // 19, 20, 21, 22
                 default:
                     return 22; // По умолчанию
+            }
+        }
+    }
+
+    // Вызовите ЭТОТ метод САМЫМ ПОСЛЕДНИМ перед saveDocument(doc)
+    private static void finalizeFormatting(XWPFDocument doc) {
+        processAllParagraphs(doc, DocxGenerator::stylizeAndFixBoldInParagraph);
+
+        for (XWPFHeader h : doc.getHeaderList()) {
+            processAllParagraphs(h, DocxGenerator::stylizeAndFixBoldInParagraph);
+        }
+        for (XWPFFooter f : doc.getFooterList()) {
+            processAllParagraphs(f, DocxGenerator::stylizeAndFixBoldInParagraph);
+        }
+    }
+    private static boolean paragraphHasDrawing(XWPFParagraph p) {
+        for (XWPFRun r : p.getRuns()) {
+            try {
+                // inline рисунки (Drawing), старые VML (Pict), OLE (Object)
+                if ((r.getCTR().getDrawingList() != null && !r.getCTR().getDrawingList().isEmpty())
+                        || (r.getCTR().getPictList()    != null && !r.getCTR().getPictList().isEmpty())
+                        || (r.getCTR().getObjectList()  != null && !r.getCTR().getObjectList().isEmpty())) {
+                    return true;
+                }
+            } catch (Exception ignore) {}
+        }
+        return false;
+    }
+
+    private static final String[] BOLD_LABELS = {
+            "Методика испытания:",      // без пробела
+            "Методика испытания :",     // обычный пробел
+            "Методика испытания\u00A0:",// неразрывный пробел
+
+            "Нормативные требования:",
+            "Нормативные требования :",
+            "Нормативные требования\u00A0:"
+    };
+
+    private static void stylizeAndFixBoldInParagraph(XWPFParagraph p) {
+        String full = p.getText();
+        if (full == null || full.isEmpty()) return;
+
+        if (paragraphHasDrawing(p)) return;
+
+        // нужно ли вообще трогать абзац?
+        boolean hasTokens =
+                full.contains("[Rinfdes]") || full.contains("[Rinfreg]") ||
+                        full.contains("ч-1") || full.contains("м3/ч") || full.contains("m3/ч") ||
+                        full.contains("м2") || full.contains("м3") || full.contains("m2") || full.contains("m3");
+
+// ведущие пробелы перед проверкой лейбла
+        int lead = 0;
+        while (lead < full.length() && Character.isWhitespace(full.charAt(lead))) lead++;
+
+// лейбл (допускаем пробел/неразрывный пробел перед двоеточием)
+        boolean hasLabel =
+                full.startsWith("Методика испытания:", lead) ||
+                        full.startsWith("Методика испытания :", lead) ||
+                        full.startsWith("Методика испытания\u00A0:", lead) ||
+                        full.startsWith("Нормативные требования:", lead) ||
+                        full.startsWith("Нормативные требования :", lead) ||
+                        full.startsWith("Нормативные требования\u00A0:", lead);
+
+        if (!hasTokens && !hasLabel) return; // НИЧЕГО НЕ ДЕЛАЕМ — чтобы не снести стрелки
+        // Базовый стиль возьмём из первого run'а
+        XWPFRun base = p.getRuns().isEmpty() ? null : p.getRuns().get(0);
+        String color = base != null ? base.getColor() : null;
+        String fontFamily = base != null ? base.getFontFamily() : null;
+        int fontSize = base != null ? base.getFontSize() : -1;
+        boolean italic = base != null && base.isItalic();
+        UnderlinePatterns ul = base != null ? base.getUnderline() : UnderlinePatterns.NONE;
+
+        // Полностью очищаем параграф
+        for (int i = p.getRuns().size() - 1; i >= 0; i--) p.removeRun(i);
+
+        // Помощник: добавить текст с нужной "жирностью"
+        java.util.function.BiConsumer<String, Boolean> addText = (s, isBold) -> {
+            if (s == null || s.isEmpty()) return;
+            XWPFRun r = p.createRun();
+            r.setText(s);
+            copyStyle(r, color, fontFamily, fontSize, isBold, italic, ul);
+        };
+
+        // Сначала — ведущие пробелы
+        int n = full.length();
+        int pos = 0;
+        while (pos < n && Character.isWhitespace(full.charAt(pos))) pos++;
+        if (pos > 0) addText.accept(full.substring(0, pos), false);
+
+        // Затем — проверяем «жирный префикс»
+        boolean hadLabel = false;
+        for (String label : BOLD_LABELS) {
+            if (full.startsWith(label, pos)) {
+                addText.accept(label, true);         // префикс жирный
+                pos += label.length();
+                hadLabel = true;
+                break;
+            }
+        }
+
+        // Остальное по абзацу — НЕ жирное (даже если шаблон был жирный весь)
+        boolean currentBold = false;
+
+        // Дальше идёт посимвольный проход с распознаванием токенов
+        while (pos < n) {
+            // 1) [Rinfdes] / [Rinfreg]
+            if (startsWith(full, pos, "[Rinfdes]")) {
+                addRinfComposite(p, color, fontFamily, fontSize, currentBold, italic, ul, "des");
+                pos += "[Rinfdes]".length();
+                continue;
+            }
+            if (startsWith(full, pos, "[Rinfreg]")) {
+                addRinfComposite(p, color, fontFamily, fontSize, currentBold, italic, ul, "reg");
+                pos += "[Rinfreg]".length();
+                continue;
+            }
+
+            // 2) м3/ч и m3/ч
+            if (startsWith(full, pos, "м3/ч") || startsWith(full, pos, "m3/ч")) {
+                char mChar = full.charAt(pos); // 'м' или 'm'
+                addM3PerH(p, mChar, color, fontFamily, fontSize, currentBold, italic, ul);
+                pos += "м3/ч".length();
+                continue;
+            }
+
+            // 3) одиночные м2/м3/m2/m3
+            if (startsWith(full, pos, "м2")) { addMpow(p, 'м', '2', color, fontFamily, fontSize, currentBold, italic, ul); pos += 2; continue; }
+            if (startsWith(full, pos, "м3")) { addMpow(p, 'м', '3', color, fontFamily, fontSize, currentBold, italic, ul); pos += 2; continue; }
+            if (startsWith(full, pos, "m2")) { addMpow(p, 'm', '2', color, fontFamily, fontSize, currentBold, italic, ul); pos += 2; continue; }
+            if (startsWith(full, pos, "m3")) { addMpow(p, 'm', '3', color, fontFamily, fontSize, currentBold, italic, ul); pos += 2; continue; }
+
+            // 4) ч-1
+            if (startsWith(full, pos, "ч-1")) {
+                XWPFRun ch = p.createRun();
+                ch.setText("ч");
+                copyStyle(ch, color, fontFamily, fontSize, currentBold, italic, ul);
+
+                XWPFRun sup = p.createRun();
+                sup.setText("−1");
+                sup.setSubscript(VerticalAlign.SUPERSCRIPT);
+                copyStyle(sup, color, fontFamily, fontSize, currentBold, italic, ul);
+
+                pos += 3;
+                continue;
+            }
+
+            // Иначе — обычный символ
+            addText.accept(String.valueOf(full.charAt(pos++)), currentBold);
+        }
+    }
+
+    private static boolean startsWith(String s, int pos, String token) {
+        int len = token.length();
+        return pos + len <= s.length() && s.regionMatches(false, pos, token, 0, len);
+    }
+
+    private static void addRinfComposite(XWPFParagraph p,
+                                         String color, String fontFamily, int fontSize,
+                                         boolean bold, boolean italic, UnderlinePatterns ul,
+                                         String superscriptSuffix) {
+        XWPFRun r = p.createRun();
+        r.setText("R");
+        copyStyle(r, color, fontFamily, fontSize, bold, italic, ul);
+
+        XWPFRun rInf = p.createRun();
+        rInf.setText("inf");
+        rInf.setSubscript(VerticalAlign.SUBSCRIPT);
+        copyStyle(rInf, color, fontFamily, fontSize, bold, italic, ul);
+
+        XWPFRun rSup = p.createRun();
+        rSup.setText(superscriptSuffix);
+        rSup.setSubscript(VerticalAlign.SUPERSCRIPT);
+        copyStyle(rSup, color, fontFamily, fontSize, bold, italic, ul);
+    }
+
+    private static void addM3PerH(XWPFParagraph p, char mChar,
+                                  String color, String fontFamily, int fontSize,
+                                  boolean bold, boolean italic, UnderlinePatterns ul) {
+        XWPFRun rM = p.createRun();
+        rM.setText(String.valueOf(mChar));
+        copyStyle(rM, color, fontFamily, fontSize, bold, italic, ul);
+
+        XWPFRun r3 = p.createRun();
+        r3.setText("3");
+        r3.setSubscript(VerticalAlign.SUPERSCRIPT);
+        copyStyle(r3, color, fontFamily, fontSize, bold, italic, ul);
+
+        XWPFRun tail = p.createRun();
+        tail.setText("/ч");
+        copyStyle(tail, color, fontFamily, fontSize, bold, italic, ul);
+    }
+
+    private static void addMpow(XWPFParagraph p, char mChar, char powChar,
+                                String color, String fontFamily, int fontSize,
+                                boolean bold, boolean italic, UnderlinePatterns ul) {
+        XWPFRun rM = p.createRun();
+        rM.setText(String.valueOf(mChar));
+        copyStyle(rM, color, fontFamily, fontSize, bold, italic, ul);
+
+        XWPFRun rPow = p.createRun();
+        rPow.setText(String.valueOf(powChar));
+        rPow.setSubscript(VerticalAlign.SUPERSCRIPT);
+        copyStyle(rPow, color, fontFamily, fontSize, bold, italic, ul);
+    }
+    // Не удаляет run'ы: просто меняет текст в существующих
+    private static void replaceAllTextNonDestructive(XWPFDocument doc, String ph, String repl) {
+        replaceInBodyNonDestructive(doc, ph, repl);
+        for (XWPFHeader h : doc.getHeaderList()) replaceInBodyNonDestructive(h, ph, repl);
+        for (XWPFFooter f : doc.getFooterList()) replaceInBodyNonDestructive(f, ph, repl);
+    }
+
+    private static void replaceInBodyNonDestructive(IBody body, String ph, String repl) {
+        for (XWPFParagraph p : body.getParagraphs()) replaceInParagraphNonDestructive(p, ph, repl);
+        for (XWPFTable t : body.getTables()) {
+            for (XWPFTableRow r : t.getRows()) {
+                for (XWPFTableCell c : r.getTableCells()) {
+                    for (XWPFParagraph p : c.getParagraphs()) replaceInParagraphNonDestructive(p, ph, repl);
+                }
+            }
+        }
+    }
+
+    private static void replaceInParagraphNonDestructive(XWPFParagraph p, String ph, String repl) {
+        String full = p.getText();
+        if (full == null || !full.contains(ph)) return;
+
+        // собираем тексты run'ов (НЕ удаляя их)
+        List<XWPFRun> runs = p.getRuns();
+        List<String> texts = new ArrayList<>(runs.size());
+        for (XWPFRun r : runs) {
+            String t = r.getText(0);
+            texts.add(t == null ? "" : t);
+        }
+
+        String newText = full.replace(ph, repl);
+
+        // распределяем новый текст по тем же run'ам
+        int pos = 0;
+        for (int i = 0; i < runs.size(); i++) {
+            XWPFRun r = runs.get(i);
+            String old = texts.get(i);
+            int take = old.length();
+
+            // очистим текущий текст (не трогаем рисунки/shape внутри run'а)
+            if (r.getText(0) != null) r.setText("", 0);
+
+            if (take > 0 && pos < newText.length()) {
+                String part = newText.substring(pos, Math.min(pos + take, newText.length()));
+                r.setText(part, 0);
+                pos += part.length();
+            }
+        }
+
+        // остаток — в последний текстовый run (не создавая новых)
+        if (pos < newText.length()) {
+            for (int i = runs.size() - 1; i >= 0; i--) {
+                if (runs.get(i).getText(0) != null) {
+                    String tailOld = runs.get(i).getText(0);
+                    runs.get(i).setText((tailOld == null ? "" : tailOld) + newText.substring(pos), 0);
+                    break;
+                }
             }
         }
     }
