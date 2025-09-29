@@ -158,7 +158,7 @@ public class DocxGenerator {
         replaceAllText(doc, "[2/4 (два для общественных зданий / 4 для жилых домов]",
                 String.valueOf(model.getAirExchangeNorm()));
         replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
-        replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()) + " м/с");
+        replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()));
         replaceAllText(doc, "[температура улица]", "+" + formatTemperature(model.getTemperature()) );
     }
 
