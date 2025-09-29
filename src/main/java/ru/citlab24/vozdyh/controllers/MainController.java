@@ -17,6 +17,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import javafx.stage.FileChooser;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class MainController {
     @FXML private VBox roomsContainer;
@@ -195,18 +199,61 @@ public class MainController {
     private void handleSave() {
         try {
             model.setTimeOfDay(timeOfDayChoiceBox.getValue());
-            URL templateUrl = getClass().getResource("/ru/citlab24/vozdyh/Шаблон.docx");
-            if (templateUrl == null) {
-                throw new RuntimeException("Файл шаблона не найден в ресурсах!");
+
+            // 1) Попросим пользователя выбрать файл назначения
+            FileChooser fc = new FileChooser();
+            fc.setTitle("Сохранить протокол");
+            fc.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Документ Word (*.docx)", "*.docx")
+            );
+            // Пример дефолтного имени файла: ПРОТОКОЛ-<номер>.docx
+            String proto = (model.getProtocolNumber() == null || model.getProtocolNumber().isBlank())
+                    ? "Протокол" : model.getProtocolNumber().trim();
+            fc.setInitialFileName("ПРОТОКОЛ-" + proto + ".docx");
+
+            File targetFile = fc.showSaveDialog(roomsContainer.getScene().getWindow());
+            if (targetFile == null) {
+                return; // пользователь нажал Cancel
             }
 
-            File savedFile = DocxGenerator.generateDocument(model, templateUrl.getFile());
-            int actualRoomCount = model.getRooms().size();
-            System.out.println("Saving document with " + actualRoomCount + " rooms");
-            Alert ok = new Alert(Alert.AlertType.INFORMATION,
-                    "Файл успешно сохранён как:\n" + savedFile.getName(), ButtonType.OK);
-            ok.setHeaderText("Готово");
-            ok.showAndWait();
+            // 2) Достаём шаблон из ресурсов корректно (без URL.getFile())
+            String templateResPath = "/ru/citlab24/vozdyh/Шаблон.docx";
+            try (InputStream in = getClass().getResourceAsStream(templateResPath)) {
+                if (in == null) {
+                    throw new IOException("Шаблон не найден в ресурсах: " + templateResPath);
+                }
+                // Скопируем ресурс во временный файл (Windows не любит кириллицу в URL)
+                Path tmp = Files.createTempFile("vozdyh-template-", ".docx");
+                Files.copy(in, tmp, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+                // 3) Генерируем документ
+                // Вариант A: если DocxGenerator принимает путь к шаблону и сам сохраняет файл,
+                //            и возвращает готовый файл — как у тебя:
+                File savedFile = DocxGenerator.generateDocument(model, tmp.toString());
+
+                // Вариант B (если DocxGenerator сохраняет в фиксированное место):
+                //    после генерации просто перенеси/скопируй в targetFile
+                //    Files.move(savedFile.toPath(), targetFile.toPath(), REPLACE_EXISTING);
+
+                // Если твой DocxGenerator умеет сразу принять выходной файл,
+                // лучше сделать перегрузку: generateDocument(model, templatePath, targetFile)
+
+                // На случай, если генератор сохранит не по выбранному пути —
+                // подстрахуемся: если файлы отличаются, копируем:
+                if (!savedFile.getAbsolutePath().equals(targetFile.getAbsolutePath())) {
+                    Files.createDirectories(targetFile.toPath().getParent());
+                    Files.copy(savedFile.toPath(), targetFile.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                int actualRoomCount = model.getRooms().size();
+                System.out.println("Saving document with " + actualRoomCount + " rooms");
+
+                Alert ok = new Alert(Alert.AlertType.INFORMATION,
+                        "Файл успешно сохранён:\n" + targetFile.getAbsolutePath(), ButtonType.OK);
+                ok.setHeaderText("Готово");
+                ok.showAndWait();
+            }
 
         } catch (Exception e) {
             Alert error = new Alert(Alert.AlertType.ERROR,
@@ -217,13 +264,4 @@ public class MainController {
             e.printStackTrace();
         }
     }
-//    private MainModel createModelFromInput() {
-//        MainModel model = new MainModel();
-//        // ... существующие привязки ...
-//
-//        // Привязка выбора времени дня
-//        model.setTimeOfDay(timeOfDayChoiceBox.getValue());
-//
-//        return model;
-//    }
 }
