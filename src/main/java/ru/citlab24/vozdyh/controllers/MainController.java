@@ -5,7 +5,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.util.converter.NumberStringConverter;
 import ru.citlab24.vozdyh.DocxGenerator;
 import ru.citlab24.vozdyh.MainModel;
 import ru.citlab24.vozdyh.RoomData;
@@ -13,7 +12,6 @@ import ru.citlab24.vozdyh.RoomInputPanel;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +19,7 @@ import javafx.stage.FileChooser;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javafx.scene.control.Label;
 
 public class MainController {
     @FXML private VBox roomsContainer;
@@ -231,15 +230,6 @@ public class MainController {
                 //            и возвращает готовый файл — как у тебя:
                 File savedFile = DocxGenerator.generateDocument(model, tmp.toString());
 
-                // Вариант B (если DocxGenerator сохраняет в фиксированное место):
-                //    после генерации просто перенеси/скопируй в targetFile
-                //    Files.move(savedFile.toPath(), targetFile.toPath(), REPLACE_EXISTING);
-
-                // Если твой DocxGenerator умеет сразу принять выходной файл,
-                // лучше сделать перегрузку: generateDocument(model, templatePath, targetFile)
-
-                // На случай, если генератор сохранит не по выбранному пути —
-                // подстрахуемся: если файлы отличаются, копируем:
                 if (!savedFile.getAbsolutePath().equals(targetFile.getAbsolutePath())) {
                     Files.createDirectories(targetFile.toPath().getParent());
                     Files.copy(savedFile.toPath(), targetFile.toPath(),

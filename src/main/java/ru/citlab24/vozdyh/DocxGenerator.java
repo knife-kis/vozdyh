@@ -159,11 +159,11 @@ public class DocxGenerator {
                 String.valueOf(model.getAirExchangeNorm()));
         replaceAllText(doc, "[давление]", formatDouble(model.getPressure()));
         replaceAllText(doc, "[скорость ветра]", formatDouble(model.getWindSpeed()));
-        replaceAllText(doc, "[температура улица]", "+" + formatTemperature(model.getTemperature()) );
+        replaceAllText(doc, "[температура улица]", formatTemperature(model.getTemperature()) );
     }
 
-    private static String formatTemperature(double value) {
-        return String.format("%d", (int) value);
+    private static String formatTemperature(double temperature) {
+        return (temperature >= 0 ? "+" : "") + temperature;
     }
 
     // Универсальный обход параграфов в теле и таблицах

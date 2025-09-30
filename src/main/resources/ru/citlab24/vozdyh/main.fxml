@@ -18,10 +18,10 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
+<?import javafx.scene.layout.Region?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="ru.citlab24.vozdyh.controllers.MainController">
-
     <center>
     <TabPane fx:id="tabPane" prefWidth="1200" prefHeight="600">
         <!-- Общие данные -->
